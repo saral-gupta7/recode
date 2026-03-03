@@ -1,4 +1,4 @@
-FROM oven/bun:1.1-alpine AS builder
+FROM oven/bun:latest AS builder
 WORKDIR /app
 
 COPY package.json bun.lock ./
