@@ -1,28 +1,53 @@
 services:
   rabbitmq:
     image: rabbitmq:3-management-alpine
-    container_name: recode_rabbitmq
+    restart: unless-stopped
     ports:
       - "5672:5672"
       - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 8
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
+
   web:
-    build: ./web
-    container_name: recode-web
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    restart: unless-stopped
     ports:
       - "3000:3000"
+    environment:
+      NODE_ENV: production
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+      QUEUE_NAME: video_processing
+      UPLOAD_DIR: /app/uploads
     volumes:
       - ./uploads:/app/uploads
     depends_on:
-      - rabbitmq
+      rabbitmq:
+        condition: service_healthy
+
   worker:
-    build: ./worker
-    container_name: recode-worker
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+      QUEUE_NAME: video_processing
     volumes:
       - ./uploads:/app/uploads
     depends_on:
-      - rabbitmq
+      rabbitmq:
+        condition: service_healthy
 
 volumes:
   rabbitmq_data:

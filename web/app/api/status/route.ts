@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import fs from "fs/promises";
 import path from "path";
+import { getUploadDir, sanitizeFileName } from "@/lib/storage";
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -10,8 +11,13 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Missing fileName" }, { status: 400 });
   }
 
-  const processedFileName = `processed-${fileName}.gif`;
-  const filePath = path.resolve(process.cwd(), "../uploads", processedFileName);
+  const sanitizedFileName = sanitizeFileName(fileName);
+  if (sanitizedFileName !== fileName) {
+    return NextResponse.json({ error: "Invalid fileName" }, { status: 400 });
+  }
+
+  const processedFileName = `processed-${sanitizedFileName}.gif`;
+  const filePath = path.join(getUploadDir(), processedFileName);
 
   try {
     await fs.access(filePath);
@@ -19,7 +25,7 @@ export async function GET(request: NextRequest) {
       status: "done",
       downloadUrl: `/api/download?file=${processedFileName}`,
     });
-  } catch (error) {
+  } catch {
     return NextResponse.json({ status: "processing" });
   }
 }

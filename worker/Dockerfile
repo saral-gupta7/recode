@@ -1,24 +1,18 @@
-FROM oven/bun:latest AS builder
+FROM node:22-bookworm-slim
+
 WORKDIR /app
 
-COPY package.json bun.lock ./
-RUN bun install --frozen-lockfile
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends ffmpeg \
+  && rm -rf /var/lib/apt/lists/*
+
+COPY package.json ./
+RUN npm install --omit=dev
 
 COPY . .
-RUN bun run build 
-
-FROM node:18-bookworm-slim AS runner
-WORKDIR /app
-
-RUN apt-get update && apt-get install -y ffmpeg && rm -rf /var/lib/apt/lists/*
 
 ENV NODE_ENV=production
 
-COPY package.json bun.lockb ./
-RUN npm install -g bun && bun install --production
-
-COPY --from=builder /app/dist ./dist
-
 RUN mkdir -p /app/uploads
 
-CMD ["node", "dist/index.js"]
+CMD ["npx", "tsx", "src/index.ts"]
