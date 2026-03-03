@@ -41,7 +41,6 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    // Only poll if we have a job ID and the status is currently processing
     if (!jobId || status !== "processing") return;
 
     const interval = setInterval(async () => {
@@ -52,14 +51,14 @@ export default function Home() {
         if (data.status === "done") {
           setStatus("done");
           setDownloadUrl(data.downloadUrl);
-          clearInterval(interval); // Stop polling!
+          clearInterval(interval);
         }
       } catch (error) {
         console.error("Polling error:", error);
       }
-    }, 2000); // Check every 2 seconds
+    }, 2000);
 
-    return () => clearInterval(interval); // Cleanup on unmount
+    return () => clearInterval(interval);
   }, [jobId, status]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({

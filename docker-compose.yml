@@ -5,11 +5,24 @@ services:
     ports:
       - "5672:5672"
       - "15672:15672"
-    environment:
-      RABBITMQ_DEFAULT_USER: guest
-      RABBITMQ_DEFAULT_PASS: guest
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
+  web:
+    build: ./web
+    container_name: recode-web
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./uploads:/app/uploads
+    depends_on:
+      - rabbitmq
+  worker:
+    build: ./worker
+    container_name: recode-worker
+    volumes:
+      - ./uploads:/app/uploads
+    depends_on:
+      - rabbitmq
 
 volumes:
   rabbitmq_data:

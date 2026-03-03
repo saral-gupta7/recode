@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
     const filePath = path.join(uploadDir, safeName);
     await fs.writeFile(filePath, buffer);
 
-    const connection = await amqplib.connect("amqp://localhost:5672");
+    const connection = await amqplib.connect("amqp://rabbitmq:5672");
     const channel = await connection.createChannel();
     const queue = "video_processing";
 

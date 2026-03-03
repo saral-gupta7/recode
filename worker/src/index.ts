@@ -7,7 +7,7 @@ const QUEUE_NAME = "video_processing";
 
 async function startWorker() {
   try {
-    const connection = await amqplib.connect("amqp://localhost:5672");
+    const connection = await amqplib.connect("amqp://rabbitmq:5672");
     const channel = await connection.createChannel();
 
     await channel.assertQueue(QUEUE_NAME, { durable: true });

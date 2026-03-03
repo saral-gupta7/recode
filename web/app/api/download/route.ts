@@ -14,7 +14,6 @@ export async function GET(request: NextRequest) {
   try {
     const fileBuffer = await fs.readFile(filePath);
 
-    // Serve the file as an attachment so the browser downloads it
     return new NextResponse(fileBuffer, {
       headers: {
         "Content-Disposition": `attachment; filename="${fileName}"`,
