@@ -19,7 +19,8 @@ export default function Home() {
     setStatus("uploading");
     const formData = new FormData();
     formData.append("video", file);
-    formData.append("title", "Frontend Upload");
+    formData.append("operation", "FRAME_EXTRACT");
+    formData.append("timestamp", "00:00:01");
 
     try {
       const response = await fetch("/api/upload", {

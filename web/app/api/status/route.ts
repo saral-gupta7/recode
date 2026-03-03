@@ -7,6 +7,8 @@ export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const fileName = searchParams.get("fileName");
 
+  const extensions = [".mp3", ".gif", ".png", ".mp4"];
+
   if (!fileName) {
     return NextResponse.json({ error: "Missing fileName" }, { status: 400 });
   }
@@ -16,16 +18,21 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Invalid fileName" }, { status: 400 });
   }
 
-  const processedFileName = `processed-${sanitizedFileName}.gif`;
-  const filePath = path.join(getUploadDir(), processedFileName);
+  for (const ext of extensions) {
+    const processedFileName = `processed-${sanitizedFileName}${ext}`;
+    const filePath = path.join(getUploadDir(), processedFileName);
 
-  try {
-    await fs.access(filePath);
-    return NextResponse.json({
-      status: "done",
-      downloadUrl: `/api/download?file=${processedFileName}`,
-    });
-  } catch {
-    return NextResponse.json({ status: "processing" });
+    try {
+      await fs.access(filePath);
+
+      return NextResponse.json({
+        status: "done",
+        downloadUrl: `/api/download?file=${processedFileName}`,
+      });
+    } catch {
+      continue;
+    }
   }
+
+  return NextResponse.json({ status: "processing" });
 }

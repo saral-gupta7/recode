@@ -1,10 +1,9 @@
 import amqplib from "amqplib";
 import path from "path";
-
 import ffmpeg from "fluent-ffmpeg";
 
 const QUEUE_NAME = process.env.QUEUE_NAME || "video_processing";
-const RABBITMQ_URL = process.env.RABBITMQ_URL || "amqp://localhost:5672";
+const RABBITMQ_URL = process.env.RABBITMQ_URL || "amqp://rabbitmq:5672";
 const RETRY_DELAY_MS = 5000;
 
 async function sleep(ms: number) {
@@ -27,14 +26,10 @@ async function startWorker() {
         `[*] Worker booted. Listening for messages in '${QUEUE_NAME}'...`,
       );
 
-      connection.on("close", async () => {
-        console.error("[-] RabbitMQ connection closed. Reconnecting...");
-        await sleep(RETRY_DELAY_MS);
-        void startWorker();
-      });
-
-      connection.on("error", (error: unknown) => {
-        console.error("[-] RabbitMQ connection error:", error);
+      // Handle connection drops
+      connection.on("close", () => {
+        console.error("[-] Connection closed. Restarting...");
+        return; // The outer while loop handles the restart
       });
 
       channel.consume(
@@ -43,55 +38,68 @@ async function startWorker() {
           if (!msg) return;
 
           try {
-            const jobData = JSON.parse(msg.content.toString());
-            if (!jobData?.filePath || !jobData?.fileName) {
-              console.error("[X] Invalid job payload:", jobData);
-              channel.reject(msg, false);
-              return;
-            }
-
-            console.log(`\n[↓] Pulled job from queue: ${jobData.fileName}`);
-
-            const inputPath = jobData.filePath;
-            const outputPath = path.resolve(
-              inputPath,
-              "..",
-              `processed-${jobData.fileName}.gif`,
+            const { filePath, fileName, operation, timestamp } = JSON.parse(
+              msg.content.toString(),
             );
 
-            console.log("[⚙️] Starting FFmpeg processing...");
+            let extension = "mp4";
+            if (operation === "EXTRACT_AUDIO") extension = "mp3";
+            if (operation === "VIDEO_TO_GIF") extension = "gif";
+            if (operation === "FRAME_EXTRACT") extension = "png";
 
-            ffmpeg(inputPath)
-              .output(outputPath)
-              .setDuration(3)
+            const outputPath = path.resolve(
+              filePath,
+              "..",
+              `processed-${fileName}.${extension}`,
+            );
+            console.log(`\n[↓] Job: ${operation} | File: ${fileName}`);
+
+            let command = ffmpeg(filePath);
+
+            switch (operation) {
+              case "EXTRACT_AUDIO":
+                command = command
+                  .noVideo()
+                  .toFormat("mp3")
+                  .audioBitrate("192k");
+                break;
+              case "BLACK_AND_WHITE":
+                command = command.videoFilters("format=gray").toFormat("mp4");
+                break;
+              case "FRAME_EXTRACT":
+                command = command.seekInput(timestamp || "00:00:01").frames(1);
+                break;
+              case "VIDEO_TO_GIF":
+              default:
+                command = command
+                  .setDuration(5)
+                  .fps(10)
+                  .size("480x?")
+                  .toFormat("gif");
+                break;
+            }
+
+            command
               .on("end", () => {
-                console.log(`[✓] Success! Saved to: ${outputPath}`);
+                console.log(`[✓] Success!`);
                 channel!.ack(msg);
               })
               .on("error", (err) => {
                 console.error("[X] FFmpeg failed:", err.message);
                 channel!.reject(msg, false);
               })
-              .run();
+              .save(outputPath);
           } catch (error) {
-            console.error("[X] Failed to process queue message:", error);
+            console.error("[X] Parsing failed:", error);
             channel.reject(msg, false);
           }
         },
-        {
-          noAck: false,
-        },
+        { noAck: false },
       );
 
       return;
     } catch (error) {
-      console.error("[-] Failed to start worker:", error);
-      try {
-        await channel?.close();
-      } catch {}
-      try {
-        await connection?.close();
-      } catch {}
+      console.error("[-] Worker Error:", error);
       await sleep(RETRY_DELAY_MS);
     }
   }
