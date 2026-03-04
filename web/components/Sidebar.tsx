@@ -2,11 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Layers, Scissors, VolumeX, Wand2 } from "lucide-react";
+import { Layers, Music, Scissors, VolumeX, Wand2, Video } from "lucide-react";
 
 const tools = [
   { name: "Grayscale", href: "/grayscale", icon: Wand2, color: "text-zinc-300" },
+  { name: "Extract Audio", href: "/extract-audio", icon: Music, color: "text-emerald-400" },
   { name: "Remove Audio", href: "/remove-audio", icon: VolumeX, color: "text-cyan-400" },
+  { name: "Trim 30s", href: "/trim", icon: Scissors, color: "text-violet-400" },
+  { name: "Compress", href: "/compress", icon: Video, color: "text-orange-400" },
   { name: "Frame Extract", href: "/frames", icon: Scissors, color: "text-amber-400" },
 ];
 

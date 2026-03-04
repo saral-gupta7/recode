@@ -50,12 +50,9 @@ export async function POST(request: NextRequest) {
     const uploadDir = getUploadDir();
     await fs.mkdir(uploadDir, { recursive: true });
 
-    // Timestamp prefix keeps jobs unique even for same original filename.
     const safeName = `${Date.now()}-${sanitizedOriginalName}`;
     const filePath = path.join(uploadDir, safeName);
 
-    // Stream to disk to avoid loading full files into memory on VPS.
-    // Bridge DOM File.stream() type to Node's stream/web type for Readable.fromWeb.
     const webStream =
       file.stream() as unknown as NodeWebReadableStream<Uint8Array>;
     const nodeReadable = Readable.fromWeb(webStream);

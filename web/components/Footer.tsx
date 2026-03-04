@@ -5,7 +5,7 @@ const links = [
   { name: "Twitter", href: "https://x.com/srlgpt_a", icon: Twitter },
   {
     name: "LinkedIn",
-    href: "https://linkedin.com/saralgupta7",
+    href: "https://linkedin.com/in/saralgupta7",
     icon: Linkedin,
   },
 ];

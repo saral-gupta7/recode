@@ -7,7 +7,13 @@ const QUEUE_NAME = process.env.QUEUE_NAME || "video_processing";
 const RABBITMQ_URL = process.env.RABBITMQ_URL || "amqp://rabbitmq:5672";
 const RETRY_DELAY_MS = 5000;
 
-type JobOperation = "BLACK_AND_WHITE" | "REMOVE_AUDIO" | "FRAME_EXTRACT";
+type JobOperation =
+  | "BLACK_AND_WHITE"
+  | "REMOVE_AUDIO"
+  | "EXTRACT_AUDIO"
+  | "FRAME_EXTRACT"
+  | "TRIM_30S"
+  | "COMPRESS_VIDEO";
 
 type JobPayload = {
   filePath: string;
@@ -21,21 +27,37 @@ async function sleep(ms: number) {
 
 function normalizeOperation(operation?: string): JobOperation {
   if (operation === "REMOVE_AUDIO") return operation;
+  if (operation === "EXTRACT_AUDIO") return operation;
   if (operation === "FRAME_EXTRACT") return operation;
+  if (operation === "TRIM_30S") return operation;
+  if (operation === "COMPRESS_VIDEO") return operation;
   return "BLACK_AND_WHITE";
 }
 
 function outputExtensionForOperation(operation: JobOperation) {
+  if (operation === "EXTRACT_AUDIO") return "mp3";
   if (operation === "FRAME_EXTRACT") return "png";
   return "mp4";
 }
 
-function buildFfmpegArgs(
-  operation: JobOperation,
-  inputPath: string,
-  outputPath: string,
-) {
+function buildFfmpegArgs(operation: JobOperation, inputPath: string, outputPath: string) {
   switch (operation) {
+    case "EXTRACT_AUDIO":
+      return [
+        "-hide_banner",
+        "-i",
+        inputPath,
+        "-vn",
+        "-c:a",
+        "libmp3lame",
+        "-b:a",
+        "192k",
+        "-ar",
+        "44100",
+        "-y",
+        outputPath,
+      ];
+
     case "REMOVE_AUDIO":
       return [
         "-hide_banner",
@@ -48,9 +70,11 @@ function buildFfmpegArgs(
         "-preset",
         "medium",
         "-crf",
-        "21",
+        "20",
         "-pix_fmt",
         "yuv420p",
+        "-tag:v",
+        "avc1",
         "-an",
         "-movflags",
         "+faststart",
@@ -69,6 +93,68 @@ function buildFfmpegArgs(
         "vfr",
         "-c:v",
         "png",
+        "-y",
+        outputPath,
+      ];
+
+    case "TRIM_30S":
+      return [
+        "-hide_banner",
+        "-i",
+        inputPath,
+        "-t",
+        "30",
+        "-map",
+        "0:v:0",
+        "-map",
+        "0:a:0?",
+        "-c:v",
+        "libx264",
+        "-preset",
+        "medium",
+        "-crf",
+        "21",
+        "-pix_fmt",
+        "yuv420p",
+        "-tag:v",
+        "avc1",
+        "-c:a",
+        "aac",
+        "-b:a",
+        "128k",
+        "-movflags",
+        "+faststart",
+        "-y",
+        outputPath,
+      ];
+
+    case "COMPRESS_VIDEO":
+      return [
+        "-hide_banner",
+        "-i",
+        inputPath,
+        "-vf",
+        "scale=1280:-2:force_original_aspect_ratio=decrease",
+        "-map",
+        "0:v:0",
+        "-map",
+        "0:a:0?",
+        "-c:v",
+        "libx264",
+        "-preset",
+        "slow",
+        "-crf",
+        "28",
+        "-pix_fmt",
+        "yuv420p",
+        "-tag:v",
+        "avc1",
+        "-c:a",
+        "aac",
+        "-b:a",
+        "96k",
+        "-movflags",
+        "+faststart",
         "-y",
         outputPath,
       ];
@@ -93,8 +179,12 @@ function buildFfmpegArgs(
         "20",
         "-pix_fmt",
         "yuv420p",
+        "-tag:v",
+        "avc1",
         "-c:a",
-        "copy",
+        "aac",
+        "-b:a",
+        "128k",
         "-movflags",
         "+faststart",
         "-y",
@@ -164,10 +254,7 @@ async function startWorker() {
             let outputPath = path.resolve(outputDir, `processed-${baseName}.${ext}`);
 
             if (operation === "FRAME_EXTRACT") {
-              const framesDir = path.resolve(
-                outputDir,
-                `processed-${baseName}-frames`,
-              );
+              const framesDir = path.resolve(outputDir, `processed-${baseName}-frames`);
               await fs.mkdir(framesDir, { recursive: true });
               outputPath = path.join(framesDir, "frame_%06d.png");
             }
