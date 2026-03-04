@@ -7,17 +7,12 @@ const QUEUE_NAME = process.env.QUEUE_NAME || "video_processing";
 const RABBITMQ_URL = process.env.RABBITMQ_URL || "amqp://rabbitmq:5672";
 const RETRY_DELAY_MS = 5000;
 
-type JobOperation =
-  | "EXTRACT_AUDIO"
-  | "BLACK_AND_WHITE"
-  | "FRAME_EXTRACT"
-  | "VIDEO_TO_GIF";
+type JobOperation = "BLACK_AND_WHITE" | "REMOVE_AUDIO" | "FRAME_EXTRACT";
 
 type JobPayload = {
   filePath: string;
   fileName: string;
   operation?: string;
-  timestamp?: string;
 };
 
 async function sleep(ms: number) {
@@ -25,60 +20,29 @@ async function sleep(ms: number) {
 }
 
 function normalizeOperation(operation?: string): JobOperation {
-  if (operation === "EXTRACT_AUDIO") return operation;
-  if (operation === "BLACK_AND_WHITE") return operation;
+  if (operation === "REMOVE_AUDIO") return operation;
   if (operation === "FRAME_EXTRACT") return operation;
-  return "VIDEO_TO_GIF";
+  return "BLACK_AND_WHITE";
 }
 
 function outputExtensionForOperation(operation: JobOperation) {
-  switch (operation) {
-    case "EXTRACT_AUDIO":
-      return "mp3";
-    case "BLACK_AND_WHITE":
-      return "mp4";
-    case "FRAME_EXTRACT":
-      return "png";
-    case "VIDEO_TO_GIF":
-    default:
-      return "gif";
-  }
+  if (operation === "FRAME_EXTRACT") return "png";
+  return "mp4";
 }
 
 function buildFfmpegArgs(
   operation: JobOperation,
   inputPath: string,
   outputPath: string,
-  timestamp?: string,
 ) {
   switch (operation) {
-    case "EXTRACT_AUDIO":
-      return [
-        "-hide_banner",
-        "-i",
-        inputPath,
-        "-vn",
-        "-c:a",
-        "libmp3lame",
-        "-b:a",
-        "192k",
-        "-ar",
-        "44100",
-        "-y",
-        outputPath,
-      ];
-
-    case "BLACK_AND_WHITE":
+    case "REMOVE_AUDIO":
       return [
         "-hide_banner",
         "-i",
         inputPath,
         "-map",
         "0:v:0",
-        "-map",
-        "0:a:0?",
-        "-vf",
-        "format=gray",
         "-c:v",
         "libx264",
         "-preset",
@@ -87,10 +51,7 @@ function buildFfmpegArgs(
         "21",
         "-pix_fmt",
         "yuv420p",
-        "-c:a",
-        "aac",
-        "-b:a",
-        "128k",
+        "-an",
         "-movflags",
         "+faststart",
         "-y",
@@ -102,24 +63,40 @@ function buildFfmpegArgs(
         "-hide_banner",
         "-i",
         inputPath,
+        "-vf",
+        "fps=1",
         "-vsync",
-        "0",
+        "vfr",
         "-c:v",
         "png",
         "-y",
         outputPath,
       ];
 
-    case "VIDEO_TO_GIF":
+    case "BLACK_AND_WHITE":
     default:
       return [
         "-hide_banner",
         "-i",
         inputPath,
+        "-map",
+        "0:v:0",
+        "-map",
+        "0:a:0?",
         "-vf",
-        "fps=12,scale=480:-1:flags=lanczos,split[s0][s1];[s0]palettegen=stats_mode=single[p];[s1][p]paletteuse=dither=bayer:bayer_scale=5",
-        "-loop",
-        "0",
+        "hue=s=0",
+        "-c:v",
+        "libx264",
+        "-preset",
+        "medium",
+        "-crf",
+        "20",
+        "-pix_fmt",
+        "yuv420p",
+        "-c:a",
+        "copy",
+        "-movflags",
+        "+faststart",
         "-y",
         outputPath,
       ];
@@ -187,20 +164,19 @@ async function startWorker() {
             let outputPath = path.resolve(outputDir, `processed-${baseName}.${ext}`);
 
             if (operation === "FRAME_EXTRACT") {
-              const framesDir = path.resolve(outputDir, `processed-${baseName}-frames`);
+              const framesDir = path.resolve(
+                outputDir,
+                `processed-${baseName}-frames`,
+              );
               await fs.mkdir(framesDir, { recursive: true });
               outputPath = path.join(framesDir, "frame_%06d.png");
             }
 
-            const args = buildFfmpegArgs(
-              operation,
-              job.filePath,
-              outputPath,
-              job.timestamp,
-            );
+            const args = buildFfmpegArgs(operation, job.filePath, outputPath);
 
             console.log(`[>] Processing ${job.fileName} as ${operation}`);
             await runFfmpeg(args);
+
             if (operation === "FRAME_EXTRACT") {
               console.log(`[✓] Created frames folder: processed-${baseName}-frames`);
             } else {

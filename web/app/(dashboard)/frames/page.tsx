@@ -5,10 +5,10 @@ export default function FrameExtractPage() {
     <ToolPage
       operation="FRAME_EXTRACT"
       title="Frame Extractor"
-      subtitle="Extract every frame from your video into a folder."
+      subtitle="Extract frames at one frame per second into a folder."
       doneTitle="All frames are ready"
       downloadLabel="Download Frames"
-      idleHint="Outputs sequential PNG frames in a processed folder."
+      idleHint="Outputs sequential PNG frames at fps=1."
     />
   );
 }

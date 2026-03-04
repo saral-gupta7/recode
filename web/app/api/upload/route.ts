@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import fs from "fs/promises";
 import path from "path";
 import amqplib from "amqplib";
+import { Readable } from "stream";
+import type { ReadableStream as NodeWebReadableStream } from "stream/web";
+import { createWriteStream } from "fs";
+import { pipeline } from "stream/promises";
 
 import { getUploadDir, sanitizeFileName } from "@/lib/storage";
 import { isOperation } from "@/lib/operations";
@@ -9,12 +13,13 @@ import { isOperation } from "@/lib/operations";
 const RABBITMQ_URL = process.env.RABBITMQ_URL || "amqp://localhost:5672";
 const QUEUE_NAME = process.env.QUEUE_NAME || "video_processing";
 
+export const runtime = "nodejs";
+
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
     const file = formData.get("video");
     const rawOperation = formData.get("operation");
-    const timestamp = formData.get("timestamp");
 
     if (!file || typeof file === "string") {
       return NextResponse.json(
@@ -23,7 +28,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!rawOperation || typeof rawOperation !== "string" || !isOperation(rawOperation)) {
+    if (
+      !rawOperation ||
+      typeof rawOperation !== "string" ||
+      !isOperation(rawOperation)
+    ) {
       return NextResponse.json(
         { error: "Invalid or missing operation." },
         { status: 400 },
@@ -45,8 +54,13 @@ export async function POST(request: NextRequest) {
     const safeName = `${Date.now()}-${sanitizedOriginalName}`;
     const filePath = path.join(uploadDir, safeName);
 
-    const arrayBuffer = await file.arrayBuffer();
-    await fs.writeFile(filePath, new Uint8Array(arrayBuffer));
+    // Stream to disk to avoid loading full files into memory on VPS.
+    // Bridge DOM File.stream() type to Node's stream/web type for Readable.fromWeb.
+    const webStream =
+      file.stream() as unknown as NodeWebReadableStream<Uint8Array>;
+    const nodeReadable = Readable.fromWeb(webStream);
+    const writable = createWriteStream(filePath);
+    await pipeline(nodeReadable, writable);
 
     const connection = await amqplib.connect(RABBITMQ_URL);
     const channel = await connection.createChannel();
@@ -56,7 +70,6 @@ export async function POST(request: NextRequest) {
       filePath,
       fileName: safeName,
       operation: rawOperation,
-      timestamp: typeof timestamp === "string" ? timestamp : undefined,
     };
 
     channel.sendToQueue(QUEUE_NAME, Buffer.from(JSON.stringify(jobPayload)), {
@@ -69,6 +82,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ fileName: safeName, operation: rawOperation });
   } catch (error) {
     console.error(error);
-    return NextResponse.json({ error: "Failed to save file." }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to save file." },
+      { status: 500 },
+    );
   }
 }
