@@ -10,6 +10,35 @@ async function sleep(ms: number) {
   await new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+type JobOperation =
+  | "EXTRACT_AUDIO"
+  | "BLACK_AND_WHITE"
+  | "FRAME_EXTRACT"
+  | "VIDEO_TO_GIF";
+
+function normalizeOperation(
+  rawOperation?: string,
+  rawAction?: string,
+): JobOperation {
+  if (rawOperation) return rawOperation as JobOperation;
+  if (rawAction === "convertToGif") return "VIDEO_TO_GIF";
+  return "VIDEO_TO_GIF";
+}
+
+function outputExtensionForOperation(operation: JobOperation) {
+  switch (operation) {
+    case "EXTRACT_AUDIO":
+      return "mp3";
+    case "FRAME_EXTRACT":
+      return "png";
+    case "BLACK_AND_WHITE":
+      return "mp4";
+    case "VIDEO_TO_GIF":
+    default:
+      return "gif";
+  }
+}
+
 async function startWorker() {
   while (true) {
     let connection: any = null;
@@ -38,25 +67,24 @@ async function startWorker() {
           if (!msg) return;
 
           try {
-            const { filePath, fileName, operation, timestamp } = JSON.parse(
-              msg.content.toString(),
-            );
+            const { filePath, fileName, operation, action, timestamp } =
+              JSON.parse(msg.content.toString());
 
-            let extension = "mp4";
-            if (operation === "EXTRACT_AUDIO") extension = "mp3";
-            if (operation === "VIDEO_TO_GIF") extension = "gif";
-            if (operation === "FRAME_EXTRACT") extension = "png";
+            const resolvedOperation = normalizeOperation(operation, action);
+            const outputExtension =
+              outputExtensionForOperation(resolvedOperation);
 
+            // Clean up the file name so we don't end up with .mp4.mp4
+            const parsedFileName = path.parse(fileName).name;
             const outputPath = path.resolve(
               filePath,
               "..",
-              `processed-${fileName}.${extension}`,
+              `processed-${parsedFileName}`, // Fixed variable name
             );
-            console.log(`\n[↓] Job: ${operation} | File: ${fileName}`);
 
             let command = ffmpeg(filePath);
 
-            switch (operation) {
+            switch (resolvedOperation) {
               case "EXTRACT_AUDIO":
                 command = command
                   .noVideo()
@@ -64,7 +92,17 @@ async function startWorker() {
                   .audioBitrate("192k");
                 break;
               case "BLACK_AND_WHITE":
-                command = command.videoFilters("format=gray").toFormat("mp4");
+                command = command
+                  .videoCodec("libx264")
+                  .audioCodec("aac") // 👈 CRITICAL: Forces Apple-friendly audio
+                  .videoFilters("hue=s=0")
+                  .outputOptions([
+                    "-pix_fmt",
+                    "yuv420p", // Forces Apple-friendly pixels
+                    "-movflags",
+                    "+faststart", // Required for web playback
+                  ])
+                  .toFormat("mp4");
                 break;
               case "FRAME_EXTRACT":
                 command = command.seekInput(timestamp || "00:00:01").frames(1);
@@ -81,7 +119,7 @@ async function startWorker() {
 
             command
               .on("end", () => {
-                console.log(`[✓] Success!`);
+                console.log(`[✓] Success! Job ${resolvedOperation} finished.`);
                 channel!.ack(msg);
               })
               .on("error", (err) => {

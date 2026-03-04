@@ -48,7 +48,8 @@ export async function POST(request: NextRequest) {
     const jobPayload = {
       filePath: filePath,
       fileName: safeName,
-      action: "convertToGif", // We can make this dynamic later
+      action: "convertToGif",
+      operation: "VIDEO_TO_GIF",
     };
 
     channel.sendToQueue(QUEUE_NAME, Buffer.from(JSON.stringify(jobPayload)), {

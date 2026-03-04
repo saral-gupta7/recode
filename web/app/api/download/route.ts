@@ -3,6 +3,15 @@ import fs from "fs/promises";
 import path from "path";
 import { getUploadDir, sanitizeFileName } from "@/lib/storage";
 
+function contentTypeForFile(name: string) {
+  const ext = path.extname(name).toLowerCase();
+  if (ext === ".gif") return "image/gif";
+  if (ext === ".mp4") return "video/mp4";
+  if (ext === ".mp3") return "audio/mpeg";
+  if (ext === ".png") return "image/png";
+  return "application/octet-stream";
+}
+
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const fileName = searchParams.get("file");
@@ -23,7 +32,7 @@ export async function GET(request: NextRequest) {
     return new NextResponse(fileBuffer, {
       headers: {
         "Content-Disposition": `attachment; filename="${fileName}"`,
-        "Content-Type": "image/gif",
+        "Content-Type": contentTypeForFile(fileName),
       },
     });
   } catch {

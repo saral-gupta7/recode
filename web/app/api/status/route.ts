@@ -17,9 +17,10 @@ export async function GET(request: NextRequest) {
   if (sanitizedFileName !== fileName) {
     return NextResponse.json({ error: "Invalid fileName" }, { status: 400 });
   }
+  const baseName = path.parse(sanitizedFileName).name;
 
   for (const ext of extensions) {
-    const processedFileName = `processed-${sanitizedFileName}${ext}`;
+    const processedFileName = `processed-${baseName}${ext}`;
     const filePath = path.join(getUploadDir(), processedFileName);
 
     try {
