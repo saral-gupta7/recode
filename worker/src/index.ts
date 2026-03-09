@@ -40,50 +40,72 @@ function outputExtensionForOperation(operation: JobOperation) {
   return "mp4";
 }
 
-function buildFfmpegArgs(operation: JobOperation, inputPath: string, outputPath: string) {
+function buildFfmpegCommands(
+  operation: JobOperation,
+  inputPath: string,
+  outputPath: string,
+) {
   switch (operation) {
     case "EXTRACT_AUDIO":
-      return [
+      return [[
         "-hide_banner",
         "-i",
         inputPath,
         "-vn",
         "-c:a",
         "libmp3lame",
-        "-b:a",
-        "192k",
-        "-ar",
-        "44100",
+        "-q:a",
+        "3",
+        "-threads",
+        "0",
         "-y",
         outputPath,
-      ];
+      ]];
 
     case "REMOVE_AUDIO":
       return [
-        "-hide_banner",
-        "-i",
-        inputPath,
-        "-map",
-        "0:v:0",
-        "-c:v",
-        "libx264",
-        "-preset",
-        "medium",
-        "-crf",
-        "20",
-        "-pix_fmt",
-        "yuv420p",
-        "-tag:v",
-        "avc1",
-        "-an",
-        "-movflags",
-        "+faststart",
-        "-y",
-        outputPath,
+        [
+          "-hide_banner",
+          "-i",
+          inputPath,
+          "-map",
+          "0:v:0",
+          "-c:v",
+          "copy",
+          "-an",
+          "-movflags",
+          "+faststart",
+          "-y",
+          outputPath,
+        ],
+        [
+          "-hide_banner",
+          "-i",
+          inputPath,
+          "-map",
+          "0:v:0",
+          "-c:v",
+          "libx264",
+          "-preset",
+          "veryfast",
+          "-crf",
+          "23",
+          "-pix_fmt",
+          "yuv420p",
+          "-tag:v",
+          "avc1",
+          "-an",
+          "-movflags",
+          "+faststart",
+          "-threads",
+          "0",
+          "-y",
+          outputPath,
+        ],
       ];
 
     case "FRAME_EXTRACT":
-      return [
+      return [[
         "-hide_banner",
         "-i",
         inputPath,
@@ -93,48 +115,73 @@ function buildFfmpegArgs(operation: JobOperation, inputPath: string, outputPath:
         "vfr",
         "-c:v",
         "png",
+        "-threads",
+        "0",
         "-y",
         outputPath,
-      ];
+      ]];
 
     case "TRIM_30S":
       return [
-        "-hide_banner",
-        "-i",
-        inputPath,
-        "-t",
-        "30",
-        "-map",
-        "0:v:0",
-        "-map",
-        "0:a:0?",
-        "-c:v",
-        "libx264",
-        "-preset",
-        "medium",
-        "-crf",
-        "21",
-        "-pix_fmt",
-        "yuv420p",
-        "-tag:v",
-        "avc1",
-        "-c:a",
-        "aac",
-        "-b:a",
-        "128k",
-        "-movflags",
-        "+faststart",
-        "-y",
-        outputPath,
+        [
+          "-hide_banner",
+          "-ss",
+          "0",
+          "-t",
+          "30",
+          "-i",
+          inputPath,
+          "-map",
+          "0:v:0",
+          "-map",
+          "0:a:0?",
+          "-c",
+          "copy",
+          "-movflags",
+          "+faststart",
+          "-y",
+          outputPath,
+        ],
+        [
+          "-hide_banner",
+          "-i",
+          inputPath,
+          "-t",
+          "30",
+          "-map",
+          "0:v:0",
+          "-map",
+          "0:a:0?",
+          "-c:v",
+          "libx264",
+          "-preset",
+          "veryfast",
+          "-crf",
+          "23",
+          "-pix_fmt",
+          "yuv420p",
+          "-tag:v",
+          "avc1",
+          "-c:a",
+          "aac",
+          "-b:a",
+          "128k",
+          "-movflags",
+          "+faststart",
+          "-threads",
+          "0",
+          "-y",
+          outputPath,
+        ],
       ];
 
     case "COMPRESS_VIDEO":
-      return [
+      return [[
         "-hide_banner",
         "-i",
         inputPath,
         "-vf",
-        "scale=1280:-2:force_original_aspect_ratio=decrease",
+        "scale=960:-2:force_original_aspect_ratio=decrease",
         "-map",
         "0:v:0",
         "-map",
@@ -142,9 +189,9 @@ function buildFfmpegArgs(operation: JobOperation, inputPath: string, outputPath:
         "-c:v",
         "libx264",
         "-preset",
-        "slow",
+        "veryfast",
         "-crf",
-        "28",
+        "30",
         "-pix_fmt",
         "yuv420p",
         "-tag:v",
@@ -155,13 +202,15 @@ function buildFfmpegArgs(operation: JobOperation, inputPath: string, outputPath:
         "96k",
         "-movflags",
         "+faststart",
+        "-threads",
+        "0",
         "-y",
         outputPath,
-      ];
+      ]];
 
     case "BLACK_AND_WHITE":
     default:
-      return [
+      return [[
         "-hide_banner",
         "-i",
         inputPath,
@@ -174,9 +223,9 @@ function buildFfmpegArgs(operation: JobOperation, inputPath: string, outputPath:
         "-c:v",
         "libx264",
         "-preset",
-        "medium",
+        "veryfast",
         "-crf",
-        "20",
+        "24",
         "-pix_fmt",
         "yuv420p",
         "-tag:v",
@@ -187,9 +236,11 @@ function buildFfmpegArgs(operation: JobOperation, inputPath: string, outputPath:
         "128k",
         "-movflags",
         "+faststart",
+        "-threads",
+        "0",
         "-y",
         outputPath,
-      ];
+      ]];
   }
 }
 
@@ -278,10 +329,29 @@ async function startWorker() {
               tempFilePath = null;
             }
 
-            const args = buildFfmpegArgs(operation, job.filePath, outputPath);
+            const commands = buildFfmpegCommands(
+              operation,
+              job.filePath,
+              outputPath,
+            );
 
             console.log(`[>] Processing ${job.fileName} as ${operation}`);
-            await runFfmpeg(args);
+            let completed = false;
+            let lastError: Error | null = null;
+
+            for (const args of commands) {
+              try {
+                await runFfmpeg(args);
+                completed = true;
+                break;
+              } catch (error: any) {
+                lastError = error instanceof Error ? error : new Error(String(error));
+              }
+            }
+
+            if (!completed) {
+              throw lastError || new Error("ffmpeg failed for all command variants");
+            }
 
             if (operation === "FRAME_EXTRACT") {
               await fs.rm(finalFramesDirPath!, { recursive: true, force: true });
