@@ -70,6 +70,7 @@ export default function ToolPage({
   const [mimeType, setMimeType] = useState<string>("application/octet-stream");
   const [framesDirName, setFramesDirName] = useState<string | null>(null);
   const [frameCount, setFrameCount] = useState<number | null>(null);
+  const isBusy = status === "uploading" || status === "processing";
 
   const onDrop = useCallback(
     async (acceptedFiles: File[]) => {
@@ -130,6 +131,7 @@ export default function ToolPage({
     onDrop,
     accept: { "video/*": [] },
     multiple: false,
+    disabled: isBusy,
   });
 
   return (
@@ -145,12 +147,16 @@ export default function ToolPage({
         <input {...getInputProps()} />
 
         <motion.div
-          className={`cursor-pointer overflow-hidden rounded-2xl border-2 border-dashed p-6 text-center transition-colors sm:p-10 ${
-            isDragActive
+          className={`overflow-hidden rounded-2xl border-2 border-dashed p-6 text-center transition-colors sm:p-10 ${
+            isBusy
+              ? "cursor-not-allowed border-zinc-800 bg-zinc-900/30"
+              : "cursor-pointer"
+          } ${
+            !isBusy && isDragActive
               ? "border-blue-500 bg-blue-500/10"
               : "border-zinc-800 bg-zinc-900/50 hover:border-zinc-700"
           }`}
-          animate={{ scale: isDragActive ? 1.02 : 1 }}
+          animate={{ scale: !isBusy && isDragActive ? 1.02 : 1 }}
           transition={{ type: "spring", stiffness: 300, damping: 20 }}
         >
           <AnimatePresence mode="wait">

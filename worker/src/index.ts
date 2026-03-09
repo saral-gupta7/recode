@@ -245,18 +245,37 @@ async function startWorker() {
         async (msg: any) => {
           if (!msg) return;
 
+          let tempFilePath: string | null = null;
+          let tempFramesDirPath: string | null = null;
+
           try {
             const job = parseJob(msg.content.toString());
             const operation = normalizeOperation(job.operation);
             const baseName = path.parse(job.fileName).name;
             const outputDir = path.dirname(job.filePath);
             const ext = outputExtensionForOperation(operation);
-            let outputPath = path.resolve(outputDir, `processed-${baseName}.${ext}`);
+            const finalOutputPath = path.resolve(
+              outputDir,
+              `processed-${baseName}.${ext}`,
+            );
+            const tempOutputPath = path.resolve(
+              outputDir,
+              `processed-${baseName}.tmp.${ext}`,
+            );
+            let outputPath = tempOutputPath;
+            let finalFramesDirPath: string | null = null;
+            tempFilePath = outputPath;
 
             if (operation === "FRAME_EXTRACT") {
-              const framesDir = path.resolve(outputDir, `processed-${baseName}-frames`);
-              await fs.mkdir(framesDir, { recursive: true });
-              outputPath = path.join(framesDir, "frame_%06d.png");
+              finalFramesDirPath = path.resolve(
+                outputDir,
+                `processed-${baseName}-frames`,
+              );
+              tempFramesDirPath = `${finalFramesDirPath}.tmp`;
+              await fs.rm(tempFramesDirPath, { recursive: true, force: true });
+              await fs.mkdir(tempFramesDirPath, { recursive: true });
+              outputPath = path.join(tempFramesDirPath, "frame_%06d.png");
+              tempFilePath = null;
             }
 
             const args = buildFfmpegArgs(operation, job.filePath, outputPath);
@@ -265,13 +284,25 @@ async function startWorker() {
             await runFfmpeg(args);
 
             if (operation === "FRAME_EXTRACT") {
-              console.log(`[✓] Created frames folder: processed-${baseName}-frames`);
+              await fs.rm(finalFramesDirPath!, { recursive: true, force: true });
+              await fs.rename(tempFramesDirPath!, finalFramesDirPath!);
+              console.log(
+                `[✓] Created frames folder: processed-${baseName}-frames`,
+              );
             } else {
-              console.log(`[✓] Created ${outputPath}`);
+              await fs.rm(finalOutputPath, { force: true });
+              await fs.rename(outputPath, finalOutputPath);
+              console.log(`[✓] Created ${finalOutputPath}`);
             }
 
             channel.ack(msg);
           } catch (error: any) {
+            if (tempFilePath) {
+              await fs.rm(tempFilePath, { force: true });
+            }
+            if (tempFramesDirPath) {
+              await fs.rm(tempFramesDirPath, { recursive: true, force: true });
+            }
             console.error("[X] Job failed:", error.message);
             channel.reject(msg, false);
           }
