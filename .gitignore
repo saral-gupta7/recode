@@ -1,0 +1,29 @@
+# Local project planning
+PROJECT_BLUEPRINT.md
+FURTHER_STRENGTHEN.md
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Go build and test output
+backend/bin/
+backend/coverage/
+backend/*.out
+
+# Runtime media and local data
+data/
+uploads/
+work/
+results/
+
+# Frontend dependencies and output
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+
+# Editors and operating systems
+.DS_Store
+.idea/
+.vscode/
