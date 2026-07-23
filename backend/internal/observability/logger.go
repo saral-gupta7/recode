@@ -5,7 +5,6 @@ import (
 	"os"
 )
 
-
 func NewLogger(service string) *slog.Logger {
 
 	handler := slog.NewJSONHandler(
@@ -14,9 +13,8 @@ func NewLogger(service string) *slog.Logger {
 			Level: slog.LevelInfo,
 		},
 	)
-	
-	logger := slog.New(handler)
 
+	logger := slog.New(handler)
 
 	return logger.With(
 		slog.String("service", service),
