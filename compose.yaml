@@ -1,0 +1,85 @@
+name: recode
+
+services:
+  postgres:
+    image: postgres:18.4-alpine
+    environment:
+      POSTGRES_DB: recode
+      POSTGRES_USER: recode
+      POSTGRES_PASSWORD: recode_dev
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U recode -d recode"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:8.8-alpine
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  migrate:
+    image: migrate/migrate:v4.19.1
+    profiles: ["tools"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backend/migrations:/migrations:ro
+    command:
+      - -path=/migrations
+      - -database=postgres://recode:recode_dev@postgres:5432/recode?sslmode=disable
+      - up
+
+  api:
+    build:
+      context: ./backend
+      target: api
+    environment: &backend-environment
+      RECODE_HTTP_ADDRESS: :8080
+      RECODE_DATABASE_URL: postgres://recode:recode_dev@postgres:5432/recode?sslmode=disable
+      RECODE_REDIS_ADDRESS: redis:6379
+      RECODE_STORAGE_ROOT: /data
+      RECODE_UPLOAD_MAX_BYTES: "1073741824"
+      RECODE_RESULT_RETENTION: 2h
+    ports:
+      - "8080:8080"
+    volumes:
+      - media_data:/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: ./backend
+      target: worker
+    environment: *backend-environment
+    volumes:
+      - media_data:/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+  media_data:
