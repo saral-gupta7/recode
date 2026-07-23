@@ -1,0 +1,10 @@
+ALTER TABLE jobs
+    DROP CONSTRAINT jobs_owner_hash_not_empty,
+    DROP CONSTRAINT jobs_input_key_not_empty,
+    DROP CONSTRAINT jobs_size_positive,
+    DROP COLUMN owner_token_hash,
+    DROP COLUMN options,
+    DROP COLUMN size_bytes,
+    DROP COLUMN mime_type,
+    DROP COLUMN original_filename,
+    DROP COLUMN input_key;
