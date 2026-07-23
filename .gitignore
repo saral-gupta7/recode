@@ -1,6 +1,9 @@
 # Local project planning
 PROJECT_BLUEPRINT.md
 FURTHER_STRENGTHEN.md
+revisit.md
+redo.md
+defer.md
 
 # Environment and secrets
 .env
@@ -9,6 +12,7 @@ FURTHER_STRENGTHEN.md
 
 # Go build and test output
 backend/bin/
+backend/api
 backend/coverage/
 backend/*.out
 
