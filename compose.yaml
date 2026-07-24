@@ -19,7 +19,14 @@ services:
 
   redis:
     image: redis:8.8-alpine
-    command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
+    command:
+      [
+        "redis-server",
+        "--appendonly",
+        "yes",
+        "--maxmemory-policy",
+        "noeviction",
+      ]
     ports:
       - "127.0.0.1:6379:6379"
     volumes:
@@ -77,6 +84,25 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        RECODE_API_ORIGIN: http://api:8080
+    environment:
+      RECODE_API_ORIGIN: http://api:8080
+    ports:
+      - "3000:3000"
+    depends_on:
+      api:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3000"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
     restart: unless-stopped
 
 volumes:

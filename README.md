@@ -1,12 +1,9 @@
 # Recode
 
-Recode is an account-free, no-ad media processing API for common image and
-video tasks. A Go API accepts uploads and returns immediately, while a separate
-Go worker performs CPU-intensive work with FFmpeg.
-
-This repository currently contains the minimum end-to-end backend. The frontend
-will be built after this backend has been tested and revisited from first
-principles.
+Recode is an account-free, ad-free web application for common image and video
+tasks. A Next.js interface provides local previews and job progress, a Go API
+accepts uploads without holding long-running requests open, and a separate Go
+worker performs CPU-intensive FFmpeg processing.
 
 ## Supported operations
 
@@ -41,11 +38,15 @@ Go API ─────► local shared media volume
                  ├── ffprobe validates the input
                  ├── FFmpeg processes it
                  ├── result goes to shared storage
-                 └── final state goes to PostgreSQL
+              └── final state goes to PostgreSQL
 ```
 
 The API and worker are separate processes. A long conversion therefore does not
 hold an HTTP request open or consume an API handler until it finishes.
+
+In production the browser talks only to Next.js. Same-origin rewrites forward
+`/api/*` and `/health/*` to the private Go API origin, avoiding browser CORS
+configuration and keeping internal service addresses out of the client bundle.
 
 ## Job lifecycle
 
@@ -83,6 +84,32 @@ backend/
 └── migrations/
 ```
 
+## Frontend layout
+
+```text
+frontend/
+├── app/                     # Next.js routes and application boundaries
+├── components/
+│   ├── dashboard/           # catalog and active-job entry points
+│   ├── jobs/                # lifecycle and result states
+│   ├── layout/              # responsive navigation
+│   ├── providers/           # theme and query clients
+│   ├── tools/               # operation workspace and controls
+│   └── upload/              # selection, validation, and previews
+├── config/                  # typed tool registry
+├── features/media-jobs/     # operation defaults and validation
+├── hooks/                   # browser file/object URL lifecycle
+├── lib/
+│   ├── api/                 # transport, contracts, and runtime parsing
+│   └── media/               # file rules and formatting
+└── stores/                  # minimal persisted anonymous job credentials
+```
+
+TanStack Query owns server state: job creation, polling, cancellation, deletion,
+and result retrieval. Zustand stores only cross-route client state. The anonymous
+owner token is persisted in `sessionStorage`, not local storage, and is never
+logged or encoded into a URL.
+
 ## Run locally with Docker
 
 Requirements:
@@ -102,11 +129,11 @@ Apply every pending migration:
 docker compose run --rm migrate
 ```
 
-Build and start the API and worker:
+Build and start the complete application:
 
 ```bash
-docker compose build api worker
-docker compose up -d api worker
+docker compose build api worker frontend
+docker compose up -d api worker frontend
 ```
 
 Check dependency and API health:
@@ -117,9 +144,22 @@ curl http://localhost:8080/health/live
 curl http://localhost:8080/health/ready
 ```
 
-The API is exposed on `localhost:8080`, PostgreSQL on `localhost:5433`, and
-Redis on `localhost:6379`. Uploaded and generated files live in the Docker
-`media_data` volume.
+Open `http://localhost:3000`. The API is also exposed on `localhost:8080` for
+direct development, PostgreSQL on `localhost:5433`, and Redis on
+`localhost:6379`. Uploaded and generated files live in the Docker `media_data`
+volume.
+
+For frontend-only development:
+
+```bash
+cd frontend
+cp .env.example .env.local
+pnpm install
+pnpm dev
+```
+
+`RECODE_API_ORIGIN` is server-only. It defaults to `http://localhost:8080`;
+Docker sets it to `http://api:8080`.
 
 ## Exercise the API
 
@@ -210,6 +250,16 @@ RECODE_TEST_DATABASE_URL='postgres://recode:recode_dev@localhost:5433/recode?ssl
 go test ./internal/repository/postgres
 ```
 
+Validate the frontend:
+
+```bash
+cd frontend
+pnpm lint
+pnpm typecheck
+pnpm test:run
+pnpm build
+```
+
 ## Configuration
 
 Koanf loads defaults first and then overrides them from `RECODE_*` environment
@@ -225,10 +275,13 @@ Important production settings include:
 - `RECODE_FFMPEG_PATH`
 - `RECODE_FFPROBE_PATH`
 
-## Current boundary
+## Technology
 
-This is a deliberately minimal working backend, not yet a public-production
-release. The ignored `defer.md` file is the engineering ledger for queue
-durability, recovery, rate limits, process isolation, observability, TLS,
-backups, and other hardening work that will be revisited after the first
-end-to-end test.
+- Frontend: Next.js, React, TypeScript, Tailwind CSS, TanStack Query, Zustand,
+  Zod, next-themes, Vitest
+- Backend: Go, Gin, Koanf, PostgreSQL, Redis, FFmpeg/ffprobe
+- Delivery: Docker multi-stage builds and Docker Compose
+
+The ignored `defer.md` file remains the engineering ledger for public-launch
+hardening such as queue recovery, rate limits, process isolation, observability,
+TLS, backups, and abuse controls.
