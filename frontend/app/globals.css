@@ -1,0 +1,158 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme inline {
+  --font-sans: "Archivo Variable", "Arial", sans-serif;
+  --font-mono: "IBM Plex Mono", "Courier New", monospace;
+
+  --color-canvas: var(--recode-canvas);
+  --color-surface: var(--recode-surface);
+  --color-surface-raised: var(--recode-surface-raised);
+
+  --color-ink: var(--recode-ink);
+  --color-ink-muted: var(--recode-ink-muted);
+
+  --color-line: var(--recode-line);
+  --color-line-strong: var(--recode-line-strong);
+
+  --color-accent: var(--recode-accent);
+  --color-accent-strong: var(--recode-accent-strong);
+
+  --color-success: var(--recode-success);
+  --color-warning: var(--recode-warning);
+  --color-danger: var(--recode-danger);
+  --color-focus: var(--recode-focus);
+
+  --color-inverse: var(--recode-inverse);
+  --color-on-inverse: var(--recode-on-inverse);
+
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.875rem;
+
+  --shadow-hard: 0 1px 2px var(--recode-shadow-color);
+  --shadow-soft: 0 8px 24px var(--recode-shadow-color);
+
+  --ease-workshop: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+:root {
+  color-scheme: light;
+  --recode-canvas: #f6f6f3;
+  --recode-surface: #ffffff;
+  --recode-surface-raised: #ffffff;
+  --recode-ink: #242624;
+  --recode-ink-muted: #70746f;
+  --recode-line: #e5e6e2;
+  --recode-line-strong: #c8cbc5;
+  --recode-accent: #e8efe5;
+  --recode-accent-strong: #426044;
+  --recode-success: #2f7d50;
+  --recode-warning: #a96016;
+  --recode-danger: #c44432;
+  --recode-focus: #426044;
+  --recode-inverse: #242624;
+  --recode-on-inverse: #fafaf8;
+  --recode-shadow-color: rgb(23 26 23 / 6%);
+}
+
+:root.dark {
+  color-scheme: dark;
+  --recode-canvas: #161816;
+  --recode-surface: #1d201d;
+  --recode-surface-raised: #242724;
+  --recode-ink: #f2f0e8;
+  --recode-ink-muted: #a6aea2;
+  --recode-line: #303430;
+  --recode-line-strong: #555b54;
+  --recode-accent: #29372a;
+  --recode-accent-strong: #9bb89c;
+  --recode-success: #67c98d;
+  --recode-warning: #eda24d;
+  --recode-danger: #ef6b58;
+  --recode-focus: #9bb89c;
+  --recode-inverse: #111311;
+  --recode-on-inverse: #f8f7f2;
+  --recode-shadow-color: rgb(0 0 0 / 18%);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 20rem;
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  min-height: 100svh;
+  margin: 0;
+  background-color: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-synthesis: none;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+a {
+  text-decoration: none;
+}
+
+button {
+  border: 0;
+}
+
+::selection {
+  background: var(--color-accent);
+  color: var(--color-ink);
+}
+
+:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 3px;
+}
+
+@keyframes workshop-enter {
+  from {
+    opacity: 0;
+    transform: translateY(1rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.workshop-enter {
+  animation: workshop-enter 300ms var(--ease-workshop) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
