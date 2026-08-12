@@ -10,7 +10,9 @@ RUN pnpm install --frozen-lockfile
 
 FROM base AS builder
 ARG RECODE_API_ORIGIN=http://api:8080
+ARG RECODE_SITE_URL=http://localhost:3000
 ENV RECODE_API_ORIGIN=$RECODE_API_ORIGIN
+ENV RECODE_SITE_URL=$RECODE_SITE_URL
 COPY --from=dependencies /app/node_modules ./node_modules
 COPY . .
 RUN pnpm build

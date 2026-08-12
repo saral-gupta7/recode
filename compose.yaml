@@ -71,8 +71,10 @@ services:
       context: ./frontend
       args:
         RECODE_API_ORIGIN: http://api:8080
+        RECODE_SITE_URL: ${RECODE_SITE_URL:?set RECODE_SITE_URL in .env}
     environment:
       RECODE_API_ORIGIN: http://api:8080
+      RECODE_SITE_URL: ${RECODE_SITE_URL:?set RECODE_SITE_URL in .env}
     ports:
       - "3000:3000"
     depends_on:
