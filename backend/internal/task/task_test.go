@@ -9,24 +9,21 @@ import (
 
 func TestNormalizeOptionsDefaults(t *testing.T) {
 	tests := []struct {
-		operation   job.Operation
-		wantFormat  string
-		wantQuality int
+		operation job.Operation
+		input     Options
+		check     func(Options) bool
 	}{
-		{operation: job.OperationImageConvert, wantFormat: "png"},
-		{operation: job.OperationVideoConvert, wantFormat: "mp4"},
-		{operation: job.OperationVideoExtractAudio, wantFormat: "mp3"},
-		{operation: job.OperationImageCompress, wantQuality: 80},
+		{job.OperationImageConvert, Options{}, func(o Options) bool { return o.Format == "png" }},
+		{job.OperationImageCompress, Options{}, func(o Options) bool { return o.Quality == 80 }},
+		{job.OperationImageThumbnail, Options{}, func(o Options) bool { return o.Preset == "square" }},
+		{job.OperationImageBlur, Options{}, func(o Options) bool { return o.Strength == 2 }},
+		{job.OperationImagePixelate, Options{}, func(o Options) bool { return o.BlockSize == 12 }},
 	}
-
 	for _, test := range tests {
 		t.Run(string(test.operation), func(t *testing.T) {
-			got, err := NormalizeOptions(test.operation, Options{})
-			if err != nil {
-				t.Fatalf("NormalizeOptions() error = %v", err)
-			}
-			if got.Format != test.wantFormat || got.Quality != test.wantQuality {
-				t.Errorf("NormalizeOptions() = %#v", got)
+			got, err := NormalizeOptions(test.operation, test.input)
+			if err != nil || !test.check(got) {
+				t.Fatalf("NormalizeOptions() = %+v, %v", got, err)
 			}
 		})
 	}
@@ -34,41 +31,44 @@ func TestNormalizeOptionsDefaults(t *testing.T) {
 
 func TestNormalizeOptionsRejectsInvalidValues(t *testing.T) {
 	tests := []struct {
-		name      string
 		operation job.Operation
 		options   Options
 	}{
-		{name: "image format", operation: job.OperationImageConvert, options: Options{Format: "exe"}},
-		{name: "video format", operation: job.OperationVideoConvert, options: Options{Format: "gif"}},
-		{name: "audio format", operation: job.OperationVideoExtractAudio, options: Options{Format: "mp4"}},
-		{name: "resize dimensions", operation: job.OperationImageResize},
-		{name: "negative resize dimension", operation: job.OperationImageResize, options: Options{Width: -1, Height: 100}},
-		{name: "oversized resize dimension", operation: job.OperationImageResize, options: Options{Width: maxImageDimension + 1}},
-		{name: "compression quality", operation: job.OperationImageCompress, options: Options{Quality: 101}},
-		{name: "clip duration", operation: job.OperationVideoClip, options: Options{DurationSeconds: 0}},
-		{name: "excessive clip duration", operation: job.OperationVideoClip, options: Options{DurationSeconds: maxClipDuration + 1}},
+		{job.OperationImageConvert, Options{Format: "gif"}},
+		{job.OperationImageResize, Options{}},
+		{job.OperationImageCrop, Options{Width: 10}},
+		{job.OperationImageCompress, Options{Quality: 101}},
+		{job.OperationImageRotate, Options{Angle: 45}},
+		{job.OperationImageFlip, Options{}},
+		{job.OperationImageThumbnail, Options{Preset: "giant"}},
+		{job.OperationImageAdjust, Options{Brightness: 101}},
+		{job.OperationImageBlur, Options{Strength: 21}},
+		{job.OperationImagePixelate, Options{BlockSize: 1}},
+		{job.OperationImagePadding, Options{PaddingTop: 1, Background: "url(evil)"}},
 	}
-
 	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			_, err := NormalizeOptions(test.operation, test.options)
-			if !errors.Is(err, ErrInvalidOption) {
-				t.Fatalf("NormalizeOptions() error = %v, want ErrInvalidOption", err)
-			}
-		})
+		if _, err := NormalizeOptions(test.operation, test.options); !errors.Is(err, ErrInvalidOption) {
+			t.Fatalf("%q error = %v", test.operation, err)
+		}
 	}
 }
 
-func TestDecodeOptionsRejectsUnknownField(t *testing.T) {
-	_, err := DecodeOptions([]byte(`{"surprise":true}`))
-	if !errors.Is(err, ErrInvalidOption) {
-		t.Fatalf("DecodeOptions() error = %v, want ErrInvalidOption", err)
+func TestDecodeOptionsRejectsUnknownAndTrailingJSON(t *testing.T) {
+	for _, data := range [][]byte{[]byte(`{"unknown":1}`), []byte(`{} {}`)} {
+		if _, err := DecodeOptions(data); !errors.Is(err, ErrInvalidOption) {
+			t.Fatalf("DecodeOptions() error = %v", err)
+		}
 	}
 }
 
-func TestDecodeOptionsRejectsTrailingJSON(t *testing.T) {
-	_, err := DecodeOptions([]byte(`{"width":100} {"height":100}`))
-	if !errors.Is(err, ErrInvalidOption) {
-		t.Fatalf("DecodeOptions() error = %v, want ErrInvalidOption", err)
+func TestOutputExtensionsAreImages(t *testing.T) {
+	if got := OutputExtension(job.OperationImageConvert, Options{Format: "webp"}); got != "webp" {
+		t.Fatal(got)
+	}
+	if got := OutputExtension(job.OperationImageCrop, Options{}); got != "png" {
+		t.Fatal(got)
+	}
+	if got := OutputExtension(job.OperationImageThumbnail, Options{}); got != "jpg" {
+		t.Fatal(got)
 	}
 }

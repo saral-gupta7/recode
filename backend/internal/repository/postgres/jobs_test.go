@@ -44,7 +44,7 @@ func TestJobRepositoryCreateAndFindCompletedJob(t *testing.T) {
 	deleteJobAfterTest(t, pool, id)
 
 	now := time.Date(2026, time.July, 23, 9, 0, 0, 0, time.UTC)
-	completedJob, err := job.New(id, job.OperationVideoClip, now)
+	completedJob, err := job.New(id, job.OperationImageCrop, now)
 	if err != nil {
 		t.Fatalf("job.New() error = %v", err)
 	}

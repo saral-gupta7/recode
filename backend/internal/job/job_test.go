@@ -13,7 +13,7 @@ func TestNew(t *testing.T) {
 	location := time.FixedZone("test-zone", 5*60*60+30*60)
 	now := time.Date(2026, time.July, 23, 14, 30, 0, 0, location)
 
-	got, err := New("job-123", OperationVideoClip, now)
+	got, err := New("job-123", OperationImageCrop, now)
 	if err != nil {
 		t.Fatalf("New() error = %v", err)
 	}
@@ -21,8 +21,8 @@ func TestNew(t *testing.T) {
 	if got.ID() != "job-123" {
 		t.Errorf("ID() = %q, want job-123", got.ID())
 	}
-	if got.Operation() != OperationVideoClip {
-		t.Errorf("Operation() = %q, want %q", got.Operation(), OperationVideoClip)
+	if got.Operation() != OperationImageCrop {
+		t.Errorf("Operation() = %q, want %q", got.Operation(), OperationImageCrop)
 	}
 	if got.Status() != StatusQueued {
 		t.Errorf("Status() = %q, want %q", got.Status(), StatusQueued)
@@ -516,7 +516,7 @@ func TestJobRejectsInvalidExpiration(t *testing.T) {
 func validSnapshot(status Status) Snapshot {
 	snapshot := Snapshot{
 		ID:        "job-123",
-		Operation: OperationVideoClip,
+		Operation: OperationImageCrop,
 		Status:    status,
 		CreatedAt: testNow,
 		UpdatedAt: testNow.Add(time.Minute),
@@ -561,7 +561,7 @@ func withSnapshot(status Status, mutate func(*Snapshot)) Snapshot {
 
 func mustNewJob(t *testing.T) *Job {
 	t.Helper()
-	job, err := New("job-123", OperationVideoClip, testNow)
+	job, err := New("job-123", OperationImageCrop, testNow)
 	if err != nil {
 		t.Fatalf("New() error = %v", err)
 	}

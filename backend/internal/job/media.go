@@ -4,27 +4,11 @@ import "fmt"
 
 type MediaKind string
 
-const (
-	MediaKindImage MediaKind = "image"
-	MediaKindVideo MediaKind = "video"
-)
+const MediaKindImage MediaKind = "image"
 
 func (o Operation) MediaKind() (MediaKind, error) {
-	switch o {
-	case OperationVideoGrayscale,
-		OperationVideoExtractAudio,
-		OperationVideoRemoveAudio,
-		OperationVideoConvert,
-		OperationVideoClip:
-		return MediaKindVideo, nil
-
-	case OperationImageGrayscale,
-		OperationImageConvert,
-		OperationImageCompress,
-		OperationImageResize:
+	if o.Valid() {
 		return MediaKindImage, nil
-
-	default:
-		return "", fmt.Errorf("%w: %q", ErrInvalidOperation, o)
 	}
+	return "", fmt.Errorf("%w: %q", ErrInvalidOperation, o)
 }

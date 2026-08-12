@@ -23,7 +23,7 @@ type Worker struct {
 	queue          queue.Queue
 	storage        storage.Store
 	prober         media.Prober
-	processor      media.Processor
+	processor      media.ImageProcessor
 	retention      time.Duration
 	maxOutputBytes int64
 }
@@ -34,7 +34,7 @@ func New(
 	jobQueue queue.Queue,
 	store storage.Store,
 	prober media.Prober,
-	processor media.Processor,
+	processor media.ImageProcessor,
 	retention time.Duration,
 	maxOutputBytes int64,
 ) *Worker {
@@ -153,6 +153,9 @@ func (w *Worker) process(ctx context.Context, jobID string) error {
 	}
 	if err := media.ValidateForOperation(record.Job.Operation(), info); err != nil {
 		return w.fail(ctx, jobID, "unsupported_media", err)
+	}
+	if err := media.ValidateTransform(record.Job.Operation(), record.Options, info); err != nil {
+		return w.fail(ctx, jobID, "invalid_transform", err)
 	}
 
 	extension := task.OutputExtension(record.Job.Operation(), record.Options)

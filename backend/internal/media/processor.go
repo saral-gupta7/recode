@@ -10,7 +10,7 @@ import (
 
 var ErrProcessingFailed = errors.New("media processing failed")
 
-type Processor interface {
+type ImageProcessor interface {
 	Process(
 		ctx context.Context,
 		operation job.Operation,

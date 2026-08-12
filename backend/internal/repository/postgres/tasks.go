@@ -180,6 +180,7 @@ func (r *TaskRepository) FindExpirable(
 		SELECT id
 		FROM jobs
 		WHERE status IN ('completed', 'failed', 'cancelled')
+			AND LEFT(operation, 6) = 'image_'
 			AND expires_at <= $1
 		ORDER BY expires_at
 		LIMIT $2

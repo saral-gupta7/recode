@@ -14,30 +14,18 @@ import (
 
 const maxCommandErrorBytes = 4096
 
-type FFmpeg struct {
-	path string
-}
+type FFmpeg struct{ path string }
 
-var _ Processor = (*FFmpeg)(nil)
+var _ ImageProcessor = (*FFmpeg)(nil)
 
-func NewFFmpeg(path string) *FFmpeg {
-	return &FFmpeg{path: path}
-}
+func NewFFmpeg(path string) *FFmpeg { return &FFmpeg{path: path} }
 
-func (p *FFmpeg) Process(
-	ctx context.Context,
-	operation job.Operation,
-	options task.Options,
-	inputPath string,
-	outputPath string,
-) error {
+func (p *FFmpeg) Process(ctx context.Context, operation job.Operation, options task.Options, inputPath, outputPath string) error {
 	args, err := commandArguments(operation, options, inputPath, outputPath)
 	if err != nil {
 		return err
 	}
-
-	command := exec.CommandContext(ctx, p.path, args...)
-	output, err := command.CombinedOutput()
+	output, err := exec.CommandContext(ctx, p.path, args...).CombinedOutput()
 	if err != nil {
 		if len(output) > maxCommandErrorBytes {
 			output = output[len(output)-maxCommandErrorBytes:]
@@ -47,112 +35,84 @@ func (p *FFmpeg) Process(
 	return nil
 }
 
-func commandArguments(
-	operation job.Operation,
-	options task.Options,
-	inputPath string,
-	outputPath string,
-) ([]string, error) {
-	base := []string{"-y", "-hide_banner", "-loglevel", "error"}
+func commandArguments(operation job.Operation, options task.Options, inputPath, outputPath string) ([]string, error) {
+	base := []string{"-y", "-hide_banner", "-loglevel", "error", "-i", inputPath}
+	finish := func(filters string, extra ...string) []string {
+		args := append([]string{}, base...)
+		if filters != "" {
+			args = append(args, "-vf", filters)
+		}
+		args = append(args, "-frames:v", "1")
+		args = append(args, extra...)
+		return append(args, outputPath)
+	}
 
 	switch operation {
 	case job.OperationImageGrayscale:
-		return append(base, "-i", inputPath, "-vf", "format=gray", "-frames:v", "1", outputPath), nil
-
+		return finish("format=gray"), nil
 	case job.OperationImageConvert:
-		return append(base, "-i", inputPath, "-frames:v", "1", outputPath), nil
-
+		return finish(""), nil
 	case job.OperationImageCompress:
 		qualityScale := int(math.Round(31 - (float64(options.Quality)*29)/100))
 		qualityScale = max(2, min(31, qualityScale))
-		return append(
-			base,
-			"-i", inputPath,
-			"-frames:v", "1",
-			"-q:v", strconv.Itoa(qualityScale),
-			outputPath,
-		), nil
-
+		return finish("", "-q:v", strconv.Itoa(qualityScale)), nil
 	case job.OperationImageResize:
-		width := "-1"
-		height := "-1"
+		width, height := "-1", "-1"
 		if options.Width > 0 {
 			width = strconv.Itoa(options.Width)
 		}
 		if options.Height > 0 {
 			height = strconv.Itoa(options.Height)
 		}
-		return append(
-			base,
-			"-i", inputPath,
-			"-vf", "scale="+width+":"+height,
-			"-frames:v", "1",
-			outputPath,
-		), nil
-
-	case job.OperationVideoGrayscale:
-		return append(
-			base,
-			"-i", inputPath,
-			"-vf", "format=gray",
-			"-c:v", "libx264",
-			"-preset", "veryfast",
-			"-crf", "23",
-			"-c:a", "aac",
-			outputPath,
-		), nil
-
-	case job.OperationVideoExtractAudio:
-		args := append(base, "-i", inputPath, "-vn")
-		switch options.Format {
-		case "wav":
-			args = append(args, "-c:a", "pcm_s16le")
-		case "m4a":
-			args = append(args, "-c:a", "aac")
-		default:
-			args = append(args, "-c:a", "libmp3lame")
+		return finish("scale=" + width + ":" + height), nil
+	case job.OperationImageCrop:
+		filter := fmt.Sprintf("crop=%d:%d:%d:%d", options.Width, options.Height, options.X, options.Y)
+		return finish(filter), nil
+	case job.OperationImageRotate:
+		filter := map[int]string{90: "transpose=1", 180: "hflip,vflip", 270: "transpose=2"}[options.Angle]
+		return finish(filter), nil
+	case job.OperationImageFlip:
+		filter := "hflip"
+		if options.FlipDirection == task.FlipDirectionVertical {
+			filter = "vflip"
 		}
-		return append(args, outputPath), nil
-
-	case job.OperationVideoRemoveAudio:
-		return append(
-			base,
-			"-i", inputPath,
-			"-an",
-			"-c:v", "libx264",
-			"-preset", "veryfast",
-			"-crf", "23",
-			outputPath,
-		), nil
-
-	case job.OperationVideoConvert:
-		args := append(base, "-i", inputPath)
-		switch options.Format {
-		case "webm":
-			args = append(args, "-c:v", "libvpx-vp9", "-c:a", "libopus")
-		default:
-			args = append(args, "-c:v", "libx264", "-preset", "veryfast", "-crf", "23", "-c:a", "aac")
-		}
-		return append(args, outputPath), nil
-
-	case job.OperationVideoClip:
-		return append(
-			base,
-			"-ss", formatSeconds(options.StartSeconds),
-			"-i", inputPath,
-			"-t", formatSeconds(options.DurationSeconds),
-			"-c:v", "libx264",
-			"-preset", "veryfast",
-			"-crf", "23",
-			"-c:a", "aac",
-			outputPath,
-		), nil
-
+		return finish(filter), nil
+	case job.OperationImageThumbnail:
+		width, height := thumbnailDimensions(options.Preset)
+		filter := fmt.Sprintf("scale=%d:%d:force_original_aspect_ratio=increase,crop=%d:%d", width, height, width, height)
+		return finish(filter, "-q:v", "3"), nil
+	case job.OperationImageStripMetadata:
+		return finish("", "-map_metadata", "-1", "-q:v", "2"), nil
+	case job.OperationImageAdjust:
+		brightness := float64(options.Brightness) / 100
+		contrast := 1 + float64(options.Contrast)/100
+		saturation := float64(options.Saturation) / 100
+		filter := fmt.Sprintf("eq=brightness=%s:contrast=%s:saturation=%s", decimal(brightness), decimal(contrast), decimal(saturation))
+		return finish(filter), nil
+	case job.OperationImageBlur:
+		return finish("gblur=sigma=" + decimal(options.Strength)), nil
+	case job.OperationImageSharpen:
+		return finish("unsharp=5:5:" + decimal(options.Strength)), nil
+	case job.OperationImagePixelate:
+		n := strconv.Itoa(options.BlockSize)
+		return finish("pixelize=w=" + n + ":h=" + n + ":mode=avg"), nil
+	case job.OperationImagePadding:
+		filter := fmt.Sprintf("pad=iw+%d:ih+%d:%d:%d:color=%s", options.PaddingLeft+options.PaddingRight, options.PaddingTop+options.PaddingBottom, options.PaddingLeft, options.PaddingTop, options.Background)
+		return finish(filter), nil
 	default:
 		return nil, fmt.Errorf("%w: unsupported operation %q", ErrProcessingFailed, operation)
 	}
 }
 
-func formatSeconds(value float64) string {
-	return strconv.FormatFloat(value, 'f', 3, 64)
+func thumbnailDimensions(preset string) (int, int) {
+	switch preset {
+	case "preview":
+		return 640, 360
+	case "social":
+		return 1200, 630
+	default:
+		return 256, 256
+	}
 }
+
+func decimal(value float64) string { return strconv.FormatFloat(value, 'f', 3, 64) }

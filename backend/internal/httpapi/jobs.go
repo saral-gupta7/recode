@@ -195,17 +195,7 @@ func outputContentType(extension string) string {
 		return "image/png"
 	case "webp":
 		return "image/webp"
-	case "mp3":
-		return "audio/mpeg"
-	case "wav":
-		return "audio/wav"
-	case "m4a":
-		return "audio/mp4"
-	case "webm":
-		return "video/webm"
-	case "mov":
-		return "video/quicktime"
 	default:
-		return "video/mp4"
+		return "image/png"
 	}
 }

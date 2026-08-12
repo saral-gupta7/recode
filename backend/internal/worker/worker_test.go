@@ -108,7 +108,7 @@ func TestProcessCompletesQueuedJob(t *testing.T) {
 		repository,
 		queueStub{},
 		store,
-		proberStub{info: media.MediaInfo{HasVideo: true}},
+		proberStub{info: media.MediaInfo{HasImage: true, Width: 100, Height: 100, Frames: 1, Format: "png"}},
 		processor,
 		time.Hour,
 		1024,
@@ -159,7 +159,7 @@ func TestProcessRejectsInvalidMediaBeforeProcessor(t *testing.T) {
 		t.Fatalf("store input: %v", err)
 	}
 
-	storedJob, err := job.New("job-2", job.OperationVideoConvert, time.Now().UTC())
+	storedJob, err := job.New("job-2", job.OperationImageCrop, time.Now().UTC())
 	if err != nil {
 		t.Fatalf("job.New() error = %v", err)
 	}
