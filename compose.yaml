@@ -6,7 +6,7 @@ services:
     environment:
       POSTGRES_DB: recode
       POSTGRES_USER: recode
-      POSTGRES_PASSWORD: recode_dev
+      POSTGRES_PASSWORD: ${RECODE_POSTGRES_PASSWORD:-recode_dev}
     ports:
       - "127.0.0.1:5433:5432"
     volumes:
@@ -46,7 +46,7 @@ services:
       - ./backend/migrations:/migrations:ro
     command:
       - -path=/migrations
-      - -database=postgres://recode:recode_dev@postgres:5432/recode?sslmode=disable
+      - -database=${RECODE_COMPOSE_DATABASE_URL:-postgres://recode:recode_dev@postgres:5432/recode?sslmode=disable}
       - up
 
   api:
@@ -55,7 +55,7 @@ services:
       target: api
     environment: &backend-environment
       RECODE_HTTP_ADDRESS: :8080
-      RECODE_DATABASE_URL: postgres://recode:recode_dev@postgres:5432/recode?sslmode=disable
+      RECODE_DATABASE_URL: ${RECODE_COMPOSE_DATABASE_URL:-postgres://recode:recode_dev@postgres:5432/recode?sslmode=disable}
       RECODE_REDIS_ADDRESS: redis:6379
       RECODE_STORAGE_ROOT: /data
       RECODE_UPLOAD_MAX_BYTES: "1073741824"

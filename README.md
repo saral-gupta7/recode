@@ -132,6 +132,26 @@ docker compose up -d api worker frontend
 Compose starts PostgreSQL and Redis automatically, runs every pending migration,
 and only starts the API and worker after migration succeeds.
 
+For a VPS, create a repository-root `.env` before the first start and use the
+same URL-safe password in both values:
+
+```dotenv
+RECODE_POSTGRES_PASSWORD=replace_with_a_long_random_password
+RECODE_COMPOSE_DATABASE_URL=postgres://recode:replace_with_a_long_random_password@postgres:5432/recode?sslmode=disable
+```
+
+PostgreSQL only reads `POSTGRES_PASSWORD` when its data volume is first
+initialized. If an existing volume was created with another password, updating
+`.env` alone will not change the database role. Reset it without deleting data:
+
+```bash
+docker compose up -d postgres
+docker compose exec postgres psql -U recode -d recode
+```
+
+At the `psql` prompt run `\password recode`, enter the password from `.env`
+twice, then exit with `\q`. Start the stack again with `docker compose up -d`.
+
 Check dependency and API health:
 
 ```bash
