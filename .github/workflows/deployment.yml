@@ -1,0 +1,381 @@
+name: Production deployment
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  backend-quality:
+    name: Backend quality checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+
+      - name: Install Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+
+      - name: Check formatting
+        run: |
+          unformatted="$(gofmt -l .)"
+          test -z "$unformatted" || {
+            printf 'The following files require gofmt:\n%s\n' "$unformatted"
+            exit 1
+          }
+
+      - name: Run static analysis
+        run: go vet ./...
+
+      - name: Run backend tests
+        run: go test -race -count=1 ./...
+
+  frontend-quality:
+    name: Frontend quality checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@a8198c4bff370c8506180b035930dea56dbd5288
+        with:
+          version: 11.17.0
+          run_install: false
+
+      - name: Install Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: 24.18.0
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check types
+        run: pnpm typecheck
+
+      - name: Run lint
+        run: pnpm lint
+
+      - name: Run frontend tests
+        run: pnpm test:run
+
+      - name: Build frontend
+        env:
+          RECODE_SITE_URL: https://example.invalid
+        run: pnpm build
+
+  deployment-config:
+    name: Validate deployment configuration
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+
+      - name: Validate production Compose file
+        env:
+          RECODE_IMAGE_TAG: test
+          RECODE_COMPOSE_DATABASE_URL: postgresql://user:password@example.invalid/neondb?sslmode=require
+          RECODE_SITE_URL: https://example.invalid
+        run: docker compose -f compose.deploy.yaml config --quiet
+
+  publish-images:
+    name: Publish production images
+    if: github.event_name != 'pull_request'
+    needs:
+      - backend-quality
+      - frontend-quality
+      - deployment-config
+
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    environment:
+      name: production
+      deployment: false
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4
+
+      - name: Authenticate with GitHub Container Registry
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and publish API
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
+        with:
+          context: ./backend
+          target: api
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ghcr.io/saral-gupta7/recode-api:${{ github.sha }}
+            ghcr.io/saral-gupta7/recode-api:main
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: type=gha,scope=recode-api
+          cache-to: type=gha,mode=max,scope=recode-api
+          provenance: mode=max
+          sbom: true
+
+      - name: Build and publish worker
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
+        with:
+          context: ./backend
+          target: worker
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ghcr.io/saral-gupta7/recode-worker:${{ github.sha }}
+            ghcr.io/saral-gupta7/recode-worker:main
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: type=gha,scope=recode-worker
+          cache-to: type=gha,mode=max,scope=recode-worker
+          provenance: mode=max
+          sbom: true
+
+      - name: Build and publish frontend
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7
+        with:
+          context: ./frontend
+          target: runner
+          platforms: linux/amd64
+          push: true
+          build-args: |
+            RECODE_API_ORIGIN=http://api:8080
+            RECODE_SITE_URL=${{ vars.PRODUCTION_URL }}
+          tags: |
+            ghcr.io/saral-gupta7/recode-frontend:${{ github.sha }}
+            ghcr.io/saral-gupta7/recode-frontend:main
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: type=gha,scope=recode-frontend
+          cache-to: type=gha,mode=max,scope=recode-frontend
+          provenance: mode=max
+          sbom: true
+  deploy-production:
+    name: Deploy to production
+    if: github.event_name != 'pull_request'
+    needs:
+      - publish-images
+
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    concurrency:
+      group: production-deployment
+      cancel-in-progress: false
+
+    environment:
+      name: production
+      url: ${{ vars.PRODUCTION_URL }}
+
+    permissions:
+      contents: read
+
+    env:
+      DEPLOY_HOST: ${{ vars.VPS_HOST }}
+      DEPLOY_USER: ${{ vars.VPS_USER }}
+      DEPLOY_PORT: ${{ vars.VPS_PORT }}
+      DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
+      PRODUCTION_URL: ${{ vars.PRODUCTION_URL }}
+      IMAGE_TAG: ${{ github.sha }}
+      SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+      SSH_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+
+    steps:
+      - name: Configure SSH
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+
+          install -d -m 700 "$RUNNER_TEMP/recode-ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" \
+            > "$RUNNER_TEMP/recode-ssh/deploy_key"
+          printf '%s\n' "$SSH_KNOWN_HOSTS" \
+            > "$RUNNER_TEMP/recode-ssh/known_hosts"
+
+          chmod 600 "$RUNNER_TEMP/recode-ssh/deploy_key"
+          chmod 600 "$RUNNER_TEMP/recode-ssh/known_hosts"
+
+      - name: Deploy exact image version
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+
+          ssh \
+            -i "$RUNNER_TEMP/recode-ssh/deploy_key" \
+            -o BatchMode=yes \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            -o UserKnownHostsFile="$RUNNER_TEMP/recode-ssh/known_hosts" \
+            -o ConnectTimeout=15 \
+            -o ServerAliveInterval=15 \
+            -p "$DEPLOY_PORT" \
+            "$DEPLOY_USER@$DEPLOY_HOST" \
+            "bash -s -- '$IMAGE_TAG' '$DEPLOY_PATH'" <<'REMOTE_SCRIPT'
+          set -Eeuo pipefail
+
+          image_tag="$1"
+          deploy_path="$2"
+
+          cd "$deploy_path"
+
+          test -f .env
+
+          mkdir -p .deploy
+          current_tag_file=".deploy/current-image-tag"
+          previous_tag=""
+
+          if test -s "$current_tag_file"; then
+            previous_tag="$(cat "$current_tag_file")"
+          fi
+
+          compose() {
+            docker compose -f compose.deploy.yaml "$@"
+          }
+
+          rollback() {
+            exit_code=$?
+
+            if test -n "$previous_tag" &&
+               test "$previous_tag" != "$image_tag"; then
+              echo "Deployment failed; rolling back to $previous_tag"
+              export RECODE_IMAGE_TAG="$previous_tag"
+              compose pull api worker frontend
+              compose up -d --no-build --remove-orphans
+            fi
+
+            exit "$exit_code"
+          }
+
+          trap rollback ERR
+
+          git fetch --prune origin main
+          git checkout main
+          git pull --ff-only origin main
+
+          test -f compose.deploy.yaml
+
+          deployed_commit="$(git rev-parse HEAD)"
+          test "$deployed_commit" = "$image_tag"
+
+          export RECODE_IMAGE_TAG="$image_tag"
+
+          compose config --quiet
+          compose pull
+          compose run --rm --no-deps migrate
+          compose up -d --no-build --remove-orphans
+
+          healthy=false
+
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent --show-error \
+                 http://127.0.0.1:8080/health/ready >/dev/null &&
+               curl --fail --silent --show-error \
+                 http://127.0.0.1:3000 >/dev/null; then
+              healthy=true
+              break
+            fi
+
+            echo "Waiting for application health ($attempt/30)"
+            sleep 2
+          done
+
+          test "$healthy" = true
+
+          printf '%s\n' "$image_tag" > "$current_tag_file"
+          compose ps
+
+          trap - ERR
+          REMOTE_SCRIPT
+
+      - name: Verify public production endpoints
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+
+          curl \
+            --fail \
+            --silent \
+            --show-error \
+            --retry 6 \
+            --retry-delay 5 \
+            --retry-all-errors \
+            --max-time 20 \
+            "$PRODUCTION_URL/" \
+            >/dev/null
+
+          curl \
+            --fail \
+            --silent \
+            --show-error \
+            --retry 6 \
+            --retry-delay 5 \
+            --retry-all-errors \
+            --max-time 20 \
+            "$PRODUCTION_URL/health/ready" \
+            >/dev/null
+
+          curl \
+            --fail \
+            --silent \
+            --show-error \
+            --retry 6 \
+            --retry-delay 5 \
+            --retry-all-errors \
+            --max-time 20 \
+            "$PRODUCTION_URL/robots.txt" \
+            >/dev/null
+
+          echo "Production deployment is healthy"
+
+      - name: Remove temporary SSH files
+        if: always()
+        shell: bash
+        run: rm -rf "$RUNNER_TEMP/recode-ssh"

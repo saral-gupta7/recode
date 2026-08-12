@@ -1,0 +1,82 @@
+name: recode
+
+services:
+  redis:
+    image: redis:8.8-alpine
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --maxmemory-policy
+      - noeviction
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  migrate:
+    image: migrate/migrate:v4.19.1
+    volumes:
+      - ./backend/migrations:/migrations:ro
+    command:
+      - -path=/migrations
+      - -database=${RECODE_COMPOSE_DATABASE_URL:?database URL is required}
+      - up
+    restart: "no"
+
+  api:
+    image: ghcr.io/saral-gupta7/recode-api:${RECODE_IMAGE_TAG:?image tag is required}
+    environment: &backend-environment
+      RECODE_HTTP_ADDRESS: :8080
+      RECODE_DATABASE_URL: ${RECODE_COMPOSE_DATABASE_URL:?database URL is required}
+      RECODE_REDIS_ADDRESS: redis:6379
+      RECODE_STORAGE_ROOT: /data
+      RECODE_UPLOAD_MAX_BYTES: "1073741824"
+      RECODE_RESULT_RETENTION: 2h
+    ports:
+      - "8080:8080"
+    volumes:
+      - media_data:/data
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  worker:
+    image: ghcr.io/saral-gupta7/recode-worker:${RECODE_IMAGE_TAG:?image tag is required}
+    environment: *backend-environment
+    volumes:
+      - media_data:/data
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    image: ghcr.io/saral-gupta7/recode-frontend:${RECODE_IMAGE_TAG:?image tag is required}
+    environment:
+      RECODE_API_ORIGIN: http://api:8080
+      RECODE_SITE_URL: ${RECODE_SITE_URL:?site URL is required}
+    ports:
+      - "3000:3000"
+    depends_on:
+      api:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3000"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  redis_data:
+  media_data:

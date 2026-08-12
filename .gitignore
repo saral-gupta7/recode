@@ -33,3 +33,6 @@ frontend/out/
 .DS_Store
 .idea/
 .vscode/
+
+# Local and server deployment state
+.deploy/
