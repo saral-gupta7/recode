@@ -1,4 +1,8 @@
-import { Clock3, Download, Upload } from "lucide-react";
+import {
+  Clock as Clock3,
+  DownloadSimple as Download,
+  UploadSimple as Upload,
+} from "@phosphor-icons/react/ssr";
 
 const steps = [
   {
@@ -23,9 +27,9 @@ const steps = [
 
 export function HowItWorks() {
   return (
-    <section className="overflow-hidden rounded-lg border border-line bg-surface">
-      <div className="border-b border-line px-5 py-5 sm:px-8">
-        <p className="text-sm font-medium text-ink-muted">
+    <section className="mb-6 overflow-hidden rounded-md border border-line bg-surface">
+      <div className="border-b border-line px-5 py-3.5">
+        <p className="text-xs font-semibold text-ink-muted">
           One file. Three steps.
         </p>
       </div>
@@ -36,18 +40,18 @@ export function HowItWorks() {
           return (
             <li
               key={step.number}
-              className="border-b border-line p-6 last:border-b-0 md:border-r md:border-b-0 md:last:border-r-0 sm:p-8"
+              className="border-b border-line p-5 last:border-b-0 md:border-r md:border-b-0 md:last:border-r-0"
             >
               <div className="flex items-center justify-between">
-                <span className="font-mono text-sm text-ink-muted">
+                <span className="font-mono text-[0.65rem] font-semibold text-ink-muted">
                   /{step.number}
                 </span>
-                <Icon aria-hidden="true" className="size-5 text-ink-muted" />
+                <Icon aria-hidden="true" className="size-4 text-accent-strong" />
               </div>
-              <h2 className="mt-10 text-xl font-semibold tracking-[-0.025em]">
+              <h2 className="mt-5 text-sm font-semibold tracking-[-0.015em]">
                 {step.title}
               </h2>
-              <p className="mt-3 text-sm leading-6 text-ink-muted">
+              <p className="mt-2 text-xs leading-5 text-ink-muted">
                 {step.description}
               </p>
             </li>

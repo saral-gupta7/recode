@@ -5,11 +5,11 @@ import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
-  CircleAlert,
-  LoaderCircle,
-  LockKeyhole,
-  UploadCloud,
-} from "lucide-react";
+  Key as LockKeyhole,
+  SpinnerGap as LoaderCircle,
+  UploadSimple as UploadCloud,
+  WarningCircle as CircleAlert,
+} from "@phosphor-icons/react/ssr";
 
 import { JobStatusPanel } from "@/components/jobs/job-status-panel";
 import { ResultPreview } from "@/components/jobs/result-preview";
@@ -50,6 +50,7 @@ export function MediaJobWorkspace({ toolSlug }: MediaJobWorkspaceProps) {
 
 function Workspace({ toolSlug }: { toolSlug: string }) {
   const tool = getToolBySlug(toolSlug)!;
+
   const Icon = tool.icon;
   const queryClient = useQueryClient();
   const uploadControllerRef = useRef<AbortController | null>(null);
@@ -66,6 +67,7 @@ function Workspace({ toolSlug }: { toolSlug: string }) {
   const [optionErrors, setOptionErrors] = useState<OptionErrors>({});
   const [uploadProgress, setUploadProgress] = useState(0);
 
+  const imagePreviewStyle = previewStyle(tool.operation, options);
   const activeJob = useWorkspaceStore((state) => state.activeJob);
   const hydrated = useWorkspaceStore((state) => state.hydrated);
   const setActiveJob = useWorkspaceStore((state) => state.setActiveJob);
@@ -208,30 +210,30 @@ function Workspace({ toolSlug }: { toolSlug: string }) {
   return (
     <main
       id="main-content"
-      className="mx-auto w-full max-w-368 px-4 py-8 sm:px-8 lg:px-10 lg:py-12"
+      className="mx-auto w-full max-w-6xl px-4 py-5 sm:px-6 lg:px-8 lg:py-7"
     >
       <Link
         href="/"
-        className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold hover:underline hover:underline-offset-4"
+        className="inline-flex min-h-9 items-center gap-2 text-xs font-semibold text-ink-muted hover:text-ink"
       >
         <ArrowLeft aria-hidden="true" className="size-4" />
         Back to all tools
       </Link>
 
-      <header className="mt-8 grid overflow-hidden rounded-lg border border-line bg-surface lg:grid-cols-[minmax(0,1fr)_12rem]">
-        <div className="p-6 sm:p-8">
-          <p className="text-sm font-medium capitalize text-ink-muted">
+      <header className="mt-4 grid overflow-hidden rounded-lg border border-line bg-surface shadow-hard sm:grid-cols-[minmax(0,1fr)_8rem]">
+        <div className="p-5 sm:p-6">
+          <p className="text-xs font-semibold capitalize text-accent-strong">
             {tool.category} tool
           </p>
-          <h1 className="mt-3 max-w-4xl text-[clamp(2.2rem,4vw,3rem)] leading-tight font-semibold tracking-tighter">
+          <h1 className="mt-1.5 max-w-4xl text-[clamp(1.75rem,4vw,2.4rem)] leading-tight font-semibold tracking-[-0.045em]">
             {tool.title}
           </h1>
-          <p className="mt-4 max-w-2xl text-base leading-7 text-ink-muted">
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-ink-muted">
             {tool.description}
           </p>
         </div>
-        <div className="grid min-h-32 place-items-center border-t border-line bg-canvas text-ink-muted lg:border-t-0 lg:border-l">
-          <Icon aria-hidden="true" strokeWidth={1.5} className="size-12" />
+        <div className="hidden place-items-center border-l border-line bg-canvas text-accent-strong sm:grid">
+          <span className="grid size-12 place-items-center rounded-lg bg-accent"><Icon aria-hidden="true" weight="bold" className="size-5" /></span>
         </div>
       </header>
 
@@ -241,16 +243,16 @@ function Workspace({ toolSlug }: { toolSlug: string }) {
           requestedToolTitle={tool.title}
         />
       ) : (
-        <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+        <div className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_15rem]">
           <section className="min-w-0">
             {!hydrated && <WorkspaceLoading />}
 
             {hydrated && !credentials && !createMutation.isPending && (
-              <div className="rounded-lg border border-line bg-surface p-4 sm:p-6">
+              <div className="rounded-lg border border-line bg-surface p-3 shadow-hard sm:p-4">
                 {selectedFile ? (
                   <FilePreview
                     key={selectedFile.previewUrl}
-                    category={tool.category}
+                    imageStyle={imagePreviewStyle}
                     selectedFile={selectedFile}
                     onRemove={clearFile}
                   />
@@ -262,9 +264,9 @@ function Workspace({ toolSlug }: { toolSlug: string }) {
                   />
                 )}
 
-                <div className="mt-6 rounded-lg border border-line bg-canvas p-5">
-                  <h2 className="text-base font-semibold">Output settings</h2>
-                  <div className="mt-5">
+                <div className="mt-3 rounded-md bg-canvas p-4">
+                  <h2 className="text-sm font-semibold">Output settings</h2>
+                  <div className="mt-4">
                     <ToolOptions
                       operation={tool.operation}
                       options={options}
@@ -280,11 +282,11 @@ function Workspace({ toolSlug }: { toolSlug: string }) {
                 <button
                   type="button"
                   disabled={!selectedFile}
-                  className="mt-6 inline-flex min-h-12 w-full items-center justify-center gap-3 rounded-md bg-ink px-6 py-3 text-sm font-semibold text-surface transition-opacity hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-45"
+                  className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-md bg-ink px-5 py-2.5 text-sm font-semibold text-canvas shadow-hard hover:-translate-y-0.5 hover:shadow-soft disabled:cursor-not-allowed disabled:opacity-45"
                   onClick={submitJob}
                 >
-                  <UploadCloud aria-hidden="true" className="size-5" />
-                  Process file
+                  <UploadCloud aria-hidden="true" className="size-4" />
+                  Process image
                 </button>
               </div>
             )}
@@ -363,7 +365,7 @@ function UploadProgress({
   return (
     <section
       aria-live="polite"
-      className="grid min-h-[29rem] place-items-center rounded-lg border border-line bg-surface p-8 text-center"
+      className="grid min-h-88 place-items-center rounded-lg border border-line bg-surface p-6 text-center"
     >
       <div className="w-full max-w-xl">
         <p className="text-sm font-medium text-ink-muted">
@@ -398,7 +400,7 @@ function UploadProgress({
 
 function WorkspaceLoading({ label = "Restoring job…" }: { label?: string }) {
   return (
-    <div className="grid min-h-116 place-items-center rounded-lg border border-line bg-surface">
+        <div className="grid min-h-88 place-items-center rounded-lg border border-line bg-surface">
       <div className="text-center">
         <LoaderCircle
           aria-hidden="true"
@@ -488,13 +490,34 @@ function InlineError({ error }: { error: Error }) {
 function WorkspaceAside({ tool, job }: { tool: MediaTool; job?: Job }) {
   return (
     <aside className="space-y-4">
-      <dl className="overflow-hidden rounded-lg border border-line bg-surface">
+      <dl className="overflow-hidden rounded-md border border-line bg-surface shadow-hard lg:sticky lg:top-6">
         <MetaRow term="Input" value={tool.accepts} />
         <MetaRow term="Output" value={tool.output} />
         {job && <MetaRow term="Status" value={job.status} last />}
       </dl>
     </aside>
   );
+}
+
+function previewStyle(operation: MediaTool["operation"], options: JobOptions) {
+  if (operation === "image_flip") {
+    return {
+      transform:
+        options.flip_direction === "vertical" ? "scaleY(-1)" : "scaleX(-1)",
+    };
+  }
+  if (operation === "image_rotate") {
+    return { transform: `rotate(${options.angle ?? 90}deg)` };
+  }
+  if (operation === "image_blur") {
+    return { filter: `blur(${Math.min(options.strength ?? 2, 10)}px)` };
+  }
+  if (operation === "image_adjust") {
+    return {
+      filter: `brightness(${100 + (options.brightness ?? 0)}%) contrast(${100 + (options.contrast ?? 0)}%) saturate(${options.saturation ?? 100}%)`,
+    };
+  }
+  return undefined;
 }
 
 function MetaRow({
@@ -507,11 +530,11 @@ function MetaRow({
   last?: boolean;
 }) {
   return (
-    <div className={`p-4 ${last ? "" : "border-b border-line"}`}>
-      <dt className="font-mono text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-ink-muted">
+    <div className={`p-3.5 ${last ? "" : "border-b border-line"}`}>
+      <dt className="text-[0.65rem] font-semibold text-ink-muted">
         {term}
       </dt>
-      <dd className="mt-2 text-sm font-semibold capitalize">{value}</dd>
+      <dd className="mt-1 text-xs font-semibold capitalize">{value}</dd>
     </div>
   );
 }

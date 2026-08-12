@@ -1,27 +1,36 @@
 import {
-  AudioLines,
-  Blend,
-  FileVideo2,
-  Film,
-  ImageDown,
-  Maximize2,
-  RefreshCw,
-  Scissors,
-  VolumeX,
-  type LucideIcon,
-} from "lucide-react";
+  CircleHalf,
+  Crop,
+  Drop,
+  Eraser,
+  FlipHorizontal,
+  FrameCorners,
+  GridFour,
+  ImageSquare,
+  ImagesSquare,
+  ArrowsOut,
+  ArrowsClockwise,
+  SlidersHorizontal,
+  Sparkle,
+} from "@phosphor-icons/react/ssr";
+import type { Icon } from "@phosphor-icons/react";
 
-export type ToolCategory = "image" | "video";
+export type ToolCategory = "image";
 export type JobOperation =
-  | "video_grayscale"
-  | "video_extract_audio"
-  | "video_remove_audio"
-  | "video_convert"
-  | "video_clip"
   | "image_grayscale"
   | "image_convert"
   | "image_compress"
-  | "image_resize";
+  | "image_resize"
+  | "image_crop"
+  | "image_rotate"
+  | "image_flip"
+  | "image_thumbnail"
+  | "image_strip_metadata"
+  | "image_adjust"
+  | "image_blur"
+  | "image_sharpen"
+  | "image_pixelate"
+  | "image_padding";
 
 export interface MediaTool {
   slug: string;
@@ -32,111 +41,30 @@ export interface MediaTool {
   description: string;
   accepts: string;
   output: string;
-  icon: LucideIcon;
+  icon: Icon;
 }
 
 export const mediaTools: readonly MediaTool[] = [
-  {
-    slug: "image-grayscale",
-    operation: "image_grayscale",
-    category: "image",
-    title: "Black & white image",
-    shortTitle: "Black & white",
-    description: "Remove colour while preserving the structure and contrast of an image.",
-    accepts: "JPG, PNG, WebP",
-    output: "PNG",
-    icon: Blend,
-  },
-  {
-    slug: "image-convert",
-    operation: "image_convert",
-    category: "image",
-    title: "Convert image format",
-    shortTitle: "Change format",
-    description: "Move an image between practical web and editing formats.",
-    accepts: "JPG, PNG, WebP",
-    output: "JPG, PNG, WebP",
-    icon: RefreshCw,
-  },
-  {
-    slug: "image-compress",
-    operation: "image_compress",
-    category: "image",
-    title: "Compress image",
-    shortTitle: "Compress",
-    description: "Reduce image size with a quality level you control.",
-    accepts: "JPG, PNG, WebP",
-    output: "JPG",
-    icon: ImageDown,
-  },
-  {
-    slug: "image-resize",
-    operation: "image_resize",
-    category: "image",
-    title: "Resize image",
-    shortTitle: "Resize",
-    description: "Set new dimensions while keeping the image useful and sharp.",
-    accepts: "JPG, PNG, WebP",
-    output: "JPG",
-    icon: Maximize2,
-  },
-  {
-    slug: "video-grayscale",
-    operation: "video_grayscale",
-    category: "video",
-    title: "Black & white video",
-    shortTitle: "Black & white",
-    description: "Recode a colour video into a clean monochrome version.",
-    accepts: "MP4, MOV, WebM",
-    output: "MP4",
-    icon: FileVideo2,
-  },
-  {
-    slug: "extract-audio",
-    operation: "video_extract_audio",
-    category: "video",
-    title: "Extract audio",
-    shortTitle: "Extract audio",
-    description: "Pull the audio track out of a video as a standalone file.",
-    accepts: "MP4, MOV, WebM",
-    output: "MP3, WAV, M4A",
-    icon: AudioLines,
-  },
-  {
-    slug: "remove-audio",
-    operation: "video_remove_audio",
-    category: "video",
-    title: "Remove audio",
-    shortTitle: "Remove audio",
-    description: "Create a silent copy of a video without its audio track.",
-    accepts: "MP4, MOV, WebM",
-    output: "MP4",
-    icon: VolumeX,
-  },
-  {
-    slug: "video-convert",
-    operation: "video_convert",
-    category: "video",
-    title: "Convert video format",
-    shortTitle: "Change format",
-    description: "Recode a video for the browser, editing, or sharing.",
-    accepts: "MP4, MOV, WebM",
-    output: "MP4, MOV, WebM",
-    icon: Film,
-  },
-  {
-    slug: "video-clip",
-    operation: "video_clip",
-    category: "video",
-    title: "Clip video",
-    shortTitle: "Clip video",
-    description: "Cut out the exact section you need using a start time and duration.",
-    accepts: "MP4, MOV, WebM",
-    output: "MP4",
-    icon: Scissors,
-  },
+  tool("image-grayscale", "image_grayscale", "Black & white image", "Black & white", "Remove colour while preserving structure and contrast.", "PNG", CircleHalf),
+  tool("image-convert", "image_convert", "Convert image format", "Change format", "Convert an image to JPG, PNG, or WebP.", "JPG, PNG, WebP", ArrowsClockwise),
+  tool("image-compress", "image_compress", "Compress image", "Compress", "Reduce image size with a quality level you control.", "JPG", ImageSquare),
+  tool("image-resize", "image_resize", "Resize image", "Resize", "Set exact dimensions or preserve the original aspect ratio.", "JPG", ArrowsOut),
+  tool("image-crop", "image_crop", "Crop image", "Crop", "Crop with coordinates measured in natural image pixels.", "PNG", Crop),
+  tool("image-rotate", "image_rotate", "Rotate image", "Rotate", "Rotate clockwise by 90, 180, or 270 degrees.", "PNG", ArrowsClockwise),
+  tool("image-flip", "image_flip", "Flip image", "Flip", "Mirror an image horizontally or vertically.", "PNG", FlipHorizontal),
+  tool("image-thumbnail", "image_thumbnail", "Generate thumbnail", "Thumbnail", "Create a square, preview, or social sharing thumbnail.", "JPG", ImagesSquare),
+  tool("image-strip-metadata", "image_strip_metadata", "Strip image metadata", "Strip metadata", "Remove EXIF, GPS, and other embedded metadata.", "JPG", Eraser),
+  tool("image-adjust", "image_adjust", "Adjust image", "Adjust colour", "Tune brightness, contrast, and saturation together.", "PNG", SlidersHorizontal),
+  tool("image-blur", "image_blur", "Blur image", "Blur", "Apply a controllable Gaussian blur.", "PNG", Drop),
+  tool("image-sharpen", "image_sharpen", "Sharpen image", "Sharpen", "Increase edge definition with adjustable strength.", "PNG", Sparkle),
+  tool("image-pixelate", "image_pixelate", "Pixelate image", "Pixelate", "Create a block-pixel treatment at the chosen size.", "PNG", GridFour),
+  tool("image-padding", "image_padding", "Add canvas padding", "Add padding", "Extend the canvas with independent spacing and a background colour.", "PNG", FrameCorners),
 ] as const;
 
+function tool(slug: string, operation: JobOperation, title: string, shortTitle: string, description: string, output: string, icon: Icon): MediaTool {
+  return { slug, operation, category: "image", title, shortTitle, description, accepts: "JPG, PNG, WebP", output, icon };
+}
+
 export function getToolBySlug(slug: string): MediaTool | undefined {
-  return mediaTools.find((tool) => tool.slug === slug);
+  return mediaTools.find((item) => item.slug === slug);
 }

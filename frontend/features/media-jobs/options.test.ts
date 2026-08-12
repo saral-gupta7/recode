@@ -1,55 +1,30 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  defaultOptionsFor,
-  validateOptions,
-} from "@/features/media-jobs/options";
+import { defaultOptionsFor, validateOptions } from "@/features/media-jobs/options";
 
-describe("defaultOptionsFor", () => {
-  it("provides useful defaults only when an operation needs options", () => {
+describe("image job options", () => {
+  it("provides useful defaults", () => {
     expect(defaultOptionsFor("image_grayscale")).toEqual({});
-    expect(defaultOptionsFor("image_compress")).toEqual({ quality: 80 });
-    expect(defaultOptionsFor("video_clip")).toEqual({
-      start_seconds: 0,
-      duration_seconds: 10,
-    });
+    expect(defaultOptionsFor("image_crop")).toEqual({ x: 0, y: 0, width: 800, height: 800 });
+    expect(defaultOptionsFor("image_adjust")).toEqual({ brightness: 0, contrast: 0, saturation: 100 });
+    expect(defaultOptionsFor("image_padding")).toMatchObject({ padding_top: 32, background: "#ffffff" });
   });
-});
 
-describe("validateOptions", () => {
-  it("allows resize with either one or both dimensions", () => {
+  it("validates dimensions and crop coordinates", () => {
     expect(validateOptions("image_resize", { width: 800 })).toEqual({});
-    expect(validateOptions("image_resize", { height: 600 })).toEqual({});
+    expect(validateOptions("image_resize", { width: 0 })).toHaveProperty("width");
+    expect(validateOptions("image_crop", { x: -1, y: 0, width: 100, height: 100 })).toHaveProperty("x");
   });
 
-  it("requires at least one valid resize dimension", () => {
-    expect(
-      validateOptions("image_resize", { width: 0, height: -1 }),
-    ).toMatchObject({
-      width: expect.any(String),
-      height: expect.any(String),
-    });
+  it("validates transform ranges", () => {
+    expect(validateOptions("image_compress", { quality: 101 })).toHaveProperty("quality");
+    expect(validateOptions("image_rotate", { angle: 45 })).toHaveProperty("angle");
+    expect(validateOptions("image_blur", { strength: 21 })).toHaveProperty("strength");
+    expect(validateOptions("image_pixelate", { block_size: 1 })).toHaveProperty("block_size");
   });
 
-  it("rejects invalid quality boundaries", () => {
-    expect(validateOptions("image_compress", { quality: 0 })).toHaveProperty(
-      "quality",
-    );
-    expect(validateOptions("image_compress", { quality: 101 })).toHaveProperty(
-      "quality",
-    );
-    expect(validateOptions("image_compress", { quality: 75 })).toEqual({});
-  });
-
-  it("rejects negative clip starts and non-positive durations", () => {
-    expect(
-      validateOptions("video_clip", {
-        start_seconds: -1,
-        duration_seconds: 0,
-      }),
-    ).toMatchObject({
-      start_seconds: expect.any(String),
-      duration_seconds: expect.any(String),
-    });
+  it("validates padding and safe colours", () => {
+    expect(validateOptions("image_padding", { padding_top: 1, padding_right: 0, padding_bottom: 0, padding_left: 0, background: "#112233" })).toEqual({});
+    expect(validateOptions("image_padding", { padding_top: 1, padding_right: 0, padding_bottom: 0, padding_left: 0, background: "url(x)" })).toHaveProperty("background");
   });
 });

@@ -7,7 +7,10 @@ import {
   useRef,
   useState,
 } from "react";
-import { CircleAlert, FileUp } from "lucide-react";
+import {
+  UploadSimple as FileUp,
+  WarningCircle as CircleAlert,
+} from "@phosphor-icons/react/ssr";
 
 import type { ToolCategory } from "@/config/tools";
 import { getAcceptAttribute } from "@/lib/media/file-rules";
@@ -84,8 +87,8 @@ export function FileDropzone({
     <div>
       <div
         className={[
-          "grid min-h-[25rem] place-items-center",
-          "rounded-lg border border-dashed px-5 text-center",
+          "grid min-h-64 place-items-center",
+          "rounded-md border border-dashed px-5 text-center",
           "transition-[border-color,background-color,transform]",
           "duration-200 ease-workshop",
           dragActive
@@ -110,22 +113,21 @@ export function FileDropzone({
         />
 
         <div className="max-w-md">
-          <span className="mx-auto grid size-12 place-items-center rounded-md bg-accent text-accent-strong">
-            <FileUp aria-hidden="true" className="size-6" />
+          <span className="mx-auto grid size-10 place-items-center rounded-md bg-accent text-accent-strong">
+            <FileUp aria-hidden="true" className="size-5" />
           </span>
 
-          <h2 className="mt-6 text-xl font-semibold tracking-[-0.025em]">
+          <h2 className="mt-4 text-base font-semibold tracking-[-0.02em]">
             {dragActive ? "Release to add the file" : "Drop one file here"}
           </h2>
 
-          <p id={helpId} className="mt-3 text-sm leading-6 text-ink-muted">
-            Choose one supported {category === "image" ? "image" : "video"}.
-            Maximum file size is 1 GB.
+          <p id={helpId} className="mt-2 text-xs leading-5 text-ink-muted">
+            JPG, PNG or WebP · up to 1 GB
           </p>
 
           <button
             type="button"
-            className="mt-7 min-h-11 rounded-md px-5 py-2.5 text-sm bg-ink font-semibold dark:text-black text-white transition-colors hover:opacity-85"
+            className="mt-5 min-h-10 rounded-md bg-ink px-4 py-2 text-xs font-semibold text-canvas shadow-hard hover:-translate-y-0.5 hover:shadow-soft"
             onClick={openFilePicker}
           >
             Browse files

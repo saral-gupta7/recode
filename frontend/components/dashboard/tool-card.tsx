@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight } from "@phosphor-icons/react/ssr";
 
 import type { MediaTool } from "@/config/tools";
 
@@ -14,36 +14,26 @@ export function ToolCard({ index, tool }: ToolCardProps) {
   return (
     <Link
       href={`/tools/${tool.slug}`}
-      className="group relative flex min-h-[17rem] flex-col overflow-hidden rounded-lg border border-line bg-surface p-6 transition-[border-color,box-shadow] duration-200 hover:border-line-strong hover:shadow-soft"
+      className="group grid min-h-32 grid-cols-[2.5rem_minmax(0,1fr)_1.5rem] items-center gap-3 rounded-md border border-line bg-surface p-4 shadow-hard hover:-translate-y-0.5 hover:border-line-strong hover:shadow-soft"
     >
-      <div className="flex items-start justify-between">
-        <span className="font-mono text-xs font-semibold tracking-[0.12em] text-ink-muted">
-          {String(index + 1).padStart(2, "0")}
-        </span>
-        <span className="grid size-10 place-items-center rounded-md bg-canvas text-ink-muted transition-colors group-hover:bg-accent group-hover:text-ink">
-          <Icon aria-hidden="true" className="size-5" />
-        </span>
-      </div>
+      <span className="grid size-10 place-items-center rounded-md bg-canvas text-ink-muted group-hover:bg-accent group-hover:text-accent-strong">
+        <Icon aria-hidden="true" weight="bold" className="size-4.5" />
+      </span>
 
-      <div className="mt-auto pt-12">
-        <p className="font-mono text-[0.65rem] font-semibold uppercase tracking-[0.14em] text-ink-muted">
-          {tool.accepts} → {tool.output}
-        </p>
-        <h3 className="mt-3 text-xl leading-tight font-semibold tracking-[-0.025em]">
+      <div className="min-w-0">
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-[0.6rem] font-semibold text-ink-muted">{String(index + 1).padStart(2, "0")}</span>
+          <span className="truncate text-[0.62rem] font-medium text-ink-muted">{tool.output}</span>
+        </div>
+        <h3 className="mt-1 text-[0.95rem] leading-tight font-semibold tracking-[-0.02em]">
           {tool.title}
         </h3>
-        <p className="mt-3 max-w-sm text-sm leading-6 text-ink-muted">
+        <p className="mt-1.5 line-clamp-2 text-xs leading-5 text-ink-muted">
           {tool.description}
         </p>
       </div>
 
-      <div className="mt-6 flex items-center justify-between border-t border-line pt-4 text-xs font-semibold text-ink-muted">
-        Open tool
-        <ArrowUpRight
-          aria-hidden="true"
-          className="size-4 transition-transform group-hover:translate-x-1 group-hover:-translate-y-1"
-        />
-      </div>
+      <ArrowUpRight aria-hidden="true" className="size-4 text-ink-muted group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-accent-strong" />
     </Link>
   );
 }

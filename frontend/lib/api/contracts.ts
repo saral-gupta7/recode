@@ -1,15 +1,20 @@
 import { z } from "zod";
 
 export const jobOperationSchema = z.enum([
-  "video_grayscale",
-  "video_extract_audio",
-  "video_remove_audio",
-  "video_convert",
-  "video_clip",
   "image_grayscale",
   "image_convert",
   "image_compress",
   "image_resize",
+  "image_crop",
+  "image_rotate",
+  "image_flip",
+  "image_thumbnail",
+  "image_strip_metadata",
+  "image_adjust",
+  "image_blur",
+  "image_sharpen",
+  "image_pixelate",
+  "image_padding",
 ]);
 
 export const jobStatusSchema = z.enum([

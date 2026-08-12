@@ -57,10 +57,7 @@ export function validateFile(
     return {
       valid: false,
       code: "unsupported_file_type",
-      message:
-        category === "image"
-          ? "Choose a JPG, PNG, or WebP image."
-          : "Choose an MP4, MOV, or WebM video.",
+      message: "Choose a JPG, PNG, or WebP image.",
     };
   }
 

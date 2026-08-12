@@ -18,7 +18,7 @@ describe("validateFile", () => {
   });
 
   it("falls back to a supported extension when a browser omits the MIME type", () => {
-    expect(validateFile(file("recording.WEBM", ""), "video")).toEqual({
+    expect(validateFile(file("photo.WEBP", ""), "image")).toEqual({
       valid: true,
     });
   });

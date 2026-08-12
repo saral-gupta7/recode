@@ -1,6 +1,9 @@
 "use client";
 
-import { CircleAlert, RotateCcw } from "lucide-react";
+import {
+  ArrowClockwise as RotateCcw,
+  WarningCircle as CircleAlert,
+} from "@phosphor-icons/react/ssr";
 
 export default function ErrorPage({
   reset,
@@ -13,15 +16,15 @@ export default function ErrorPage({
       id="main-content"
       className="grid min-h-[70svh] place-items-center px-6 py-16"
     >
-      <section className="w-full max-w-2xl border-2 border-danger bg-surface p-8 text-center sm:p-12">
+      <section className="w-full max-w-xl rounded-lg border border-line bg-surface p-8 text-center shadow-hard sm:p-10">
         <CircleAlert
           aria-hidden="true"
           className="mx-auto size-10 text-danger"
         />
-        <p className="mt-6 font-mono text-xs font-semibold uppercase tracking-[0.14em] text-danger">
-          Interface fault
+        <p className="mt-5 text-xs font-semibold text-danger">
+          Interface error
         </p>
-        <h1 className="mt-4 text-4xl font-black uppercase tracking-[-0.05em]">
+        <h1 className="mt-3 text-3xl font-semibold tracking-[-0.04em]">
           Something went wrong
         </h1>
         <p className="mx-auto mt-4 max-w-md leading-7 text-ink-muted">
@@ -30,7 +33,7 @@ export default function ErrorPage({
         </p>
         <button
           type="button"
-          className="mt-8 inline-flex min-h-12 items-center gap-2 border-2 border-ink bg-accent px-5 py-3 text-sm font-bold text-[#171a17] shadow-hard"
+          className="mt-7 inline-flex min-h-10 items-center gap-2 rounded-md bg-ink px-4 py-2 text-sm font-semibold text-canvas"
           onClick={reset}
         >
           <RotateCcw aria-hidden="true" className="size-4" />

@@ -1,4 +1,4 @@
-import { LoaderCircle } from "lucide-react";
+import { SpinnerGap as LoaderCircle } from "@phosphor-icons/react/ssr";
 
 export default function Loading() {
   return (

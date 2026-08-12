@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 
+import { getToolBySlug } from "@/config/tools";
 import { useWorkspaceStore } from "@/stores/use-workspace-store";
 
 export function WorkspaceProvider({
@@ -11,6 +12,10 @@ export function WorkspaceProvider({
 }) {
   useEffect(() => {
     const markHydrated = () => {
+      const state = useWorkspaceStore.getState();
+      if (state.activeJob && !getToolBySlug(state.activeJob.toolSlug)) {
+        state.clearActiveJob();
+      }
       useWorkspaceStore.setState({ hydrated: true });
     };
 

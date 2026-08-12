@@ -1,13 +1,13 @@
 "use client";
 
 import {
-  Ban,
-  CircleAlert,
-  Clock3,
-  LoaderCircle,
-  RotateCcw,
+  ArrowClockwise as RotateCcw,
+  Clock as Clock3,
+  Prohibit as Ban,
+  SpinnerGap as LoaderCircle,
+  WarningCircle as CircleAlert,
   X,
-} from "lucide-react";
+} from "@phosphor-icons/react/ssr";
 
 import type { Job } from "@/lib/api/contracts";
 
@@ -156,22 +156,22 @@ function StatusFrame({
   return (
     <section
       aria-live="polite"
-      className="grid min-h-[29rem] place-items-center rounded-lg border border-line bg-surface px-6 py-14 text-center"
+      className="grid min-h-80 place-items-center rounded-lg border border-line bg-surface px-6 py-10 text-center shadow-hard"
     >
       <div className="max-w-xl">
-        <div className="mx-auto grid size-16 place-items-center rounded-lg bg-canvas">
+        <div className="mx-auto grid size-14 place-items-center rounded-lg bg-canvas">
           {icon}
         </div>
-        <p className="mt-6 text-sm font-medium text-ink-muted">
+        <p className="mt-4 text-xs font-medium text-accent-strong">
           {eyebrow}
         </p>
-        <h2 className="mt-3 text-2xl font-semibold tracking-[-0.035em] sm:text-3xl">
+        <h2 className="mt-2 text-xl font-semibold tracking-[-0.035em] sm:text-2xl">
           {title}
         </h2>
-        <p className="mt-4 text-sm leading-7 text-ink-muted sm:text-base">
+        <p className="mt-3 text-sm leading-6 text-ink-muted">
           {description}
         </p>
-        {children && <div className="mt-8">{children}</div>}
+        {children && <div className="mt-6">{children}</div>}
       </div>
     </section>
   );

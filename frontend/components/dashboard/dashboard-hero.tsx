@@ -1,46 +1,40 @@
 import { ProcessRail } from "@/components/dashboard/process-rail";
 
 const facts = [
-  { value: "09", label: "Focused tools" },
-  { value: "00", label: "Accounts needed" },
-  { value: "2H", label: "Result retention" },
+  { value: "14", label: "Focused tools" },
+  { value: "0", label: "Accounts needed" },
+  { value: "2h", label: "Private retention" },
 ] as const;
 
 export function DashboardHero() {
   return (
-    <section className="workshop-enter">
-      <div className="grid gap-10 border-b border-line py-14 lg:grid-cols-[minmax(0,1fr)_16rem] lg:py-20">
+    <section className="workshop-enter pt-8 sm:pt-10">
+      <div className="grid items-end gap-6 rounded-lg border border-line bg-surface p-6 shadow-hard sm:p-8 lg:grid-cols-[minmax(0,1fr)_18rem]">
         <div>
-          <p className="mb-5 text-sm font-medium text-ink-muted">
-            Private media utilities
+          <p className="mb-3 text-sm font-semibold text-accent-strong">
+            Private image workspace
           </p>
 
-          <h1 className="max-w-3xl text-[clamp(2.8rem,3vw,5.8rem)] leading-[0.96] font-semibold tracking-[-0.06em]">
-            Simple tools for images and video.
+          <h1 className="max-w-3xl text-balance text-[clamp(2.35rem,5vw,4.6rem)] leading-[0.98] font-semibold tracking-[-0.055em]">
+            Image tools, without the clutter.
           </h1>
 
-          <p className="mt-7 max-w-2xl text-base leading-7 text-ink-muted sm:text-md">
-            Convert, resize, compress, clip, or extract what you need. No
-            account, advertising, or software installation.
+          <p className="mt-4 max-w-xl text-pretty text-sm leading-6 text-ink-muted sm:text-base">
+            Crop, resize, adjust, and export in a few clicks. No account,
+            advertising, or software to install.
           </p>
+        </div>
+        <div className="grid grid-cols-3 gap-2 lg:grid-cols-1">
+          {facts.map((fact) => (
+            <div key={fact.label} className="rounded-md bg-canvas px-3 py-2.5 lg:flex lg:items-baseline lg:justify-between">
+              <span className="block font-mono text-sm font-semibold text-ink">{fact.value}</span>
+              <span className="mt-1 block text-[0.68rem] leading-tight text-ink-muted lg:mt-0">{fact.label}</span>
+            </div>
+          ))}
         </div>
       </div>
 
-      <div className="grid border-b border-line sm:grid-cols-3">
-        {facts.map((fact) => (
-          <div
-            key={fact.label}
-            className="flex items-baseline gap-3 border-b border-line py-4 last:border-b-0 sm:border-r sm:border-b-0 sm:px-5 sm:first:pl-0 sm:last:border-r-0"
-          >
-            <span className="font-mono text-lg font-semibold">
-              {fact.value}
-            </span>
-            <span className="text-xs text-ink-muted">{fact.label}</span>
-          </div>
-        ))}
-      </div>
-
-      <div className="mt-6">
+      <div className="mt-3">
         <ProcessRail />
       </div>
     </section>

@@ -9,16 +9,16 @@ export function BrandMark({ compact = false }: BrandMarkProps) {
     <Link
       href="/"
       aria-label="Recode home"
-      className="group inline-flex items-center gap-3"
+      className="group inline-flex items-center gap-2.5"
     >
       <span
         aria-hidden="true"
-        className="grid size-10 place-items-center border-2 border-ink bg-accent font-mono text-xs font-semibold text-[#171a17] shadow-hard transition-transform duration-200 group-hover:-rotate-3"
+        className="grid size-9 place-items-center rounded-md bg-ink font-mono text-[0.68rem] font-semibold text-canvas shadow-hard group-hover:-rotate-3"
       >
         R/
       </span>
       {!compact && (
-        <span className="text-xl font-bold uppercase tracking-[-0.04em]">
+        <span className="text-lg font-bold tracking-[-0.04em]">
           Recode
         </span>
       )}

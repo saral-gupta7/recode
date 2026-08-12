@@ -5,7 +5,7 @@ import { ToolCatalog } from "@/components/dashboard/tool-catalog";
 
 export default function HomePage() {
   return (
-    <main id="main-content" className="mx-auto w-full max-w-[92rem] px-4 pb-16 sm:px-8 lg:px-10 lg:pb-20">
+    <main id="main-content" className="mx-auto w-full max-w-6xl px-4 pb-12 sm:px-6 lg:px-8">
       <ActiveJobBanner />
       <DashboardHero />
       <ToolCatalog />

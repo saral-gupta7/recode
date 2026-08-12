@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import "@fontsource-variable/archivo";
+import "@fontsource-variable/manrope";
 import "@fontsource/ibm-plex-mono/400.css";
 import "@fontsource/ibm-plex-mono/500.css";
 import "@fontsource/ibm-plex-mono/600.css";
@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     template: "%s · Recode",
   },
   description:
-    "Account-free tools for converting and processing images and videos.",
+    "Account-free tools for converting and processing images.",
 };
 
 export default function RootLayout({
@@ -34,12 +34,12 @@ export default function RootLayout({
             <WorkspaceProvider>
               <a
                 href="#main-content"
-                className="fixed top-3 left-3 z-[100] -translate-y-24 border-2 border-ink bg-accent px-4 py-3 text-sm font-bold text-[#171a17] focus:translate-y-0"
+                className="fixed top-3 left-3 z-[100] -translate-y-24 rounded-md bg-ink px-4 py-2.5 text-sm font-semibold text-canvas shadow-soft focus:translate-y-0"
               >
                 Skip to content
               </a>
               <Sidebar />
-              <div className="min-h-svh lg:pl-[19rem]">
+              <div className="min-h-svh lg:pl-64">
                 <MobileHeader />
                 {children}
               </div>

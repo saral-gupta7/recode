@@ -11,7 +11,6 @@ import { ToolCard } from "./tool-card";
 const filters: ReadonlyArray<{ value: ToolFilter; label: string }> = [
   { value: "all", label: "All tools" },
   { value: "image", label: "Images" },
-  { value: "video", label: "Video & audio" },
 ];
 
 export function ToolCatalog() {
@@ -24,21 +23,21 @@ export function ToolCatalog() {
       : mediaTools.filter((tool) => tool.category === toolFilter);
 
   return (
-    <section id={`${toolFilter === "video" ? "video" : "image"}-tools`} className="scroll-mt-24 py-14 sm:py-20">
-      <div className="flex flex-col justify-between gap-6 border-b border-line pb-6 md:flex-row md:items-end">
+    <section id="image-tools" className="scroll-mt-20 py-10 sm:py-12">
+      <div className="flex flex-col justify-between gap-4 border-b border-line pb-4 sm:flex-row sm:items-end">
         <div>
-          <p className="text-sm text-ink-muted">
+          <p className="text-xs font-medium text-accent-strong">
             {visibleTools.length} available tools
           </p>
-          <h2 className="mt-2 text-3xl leading-tight font-semibold tracking-[-0.04em] sm:text-4xl">
-            Choose a tool
+          <h2 className="mt-1 text-2xl leading-tight font-semibold tracking-[-0.04em] sm:text-3xl">
+            What do you need?
           </h2>
         </div>
 
         <div
           role="group"
           aria-label="Filter tools"
-          className="flex w-full rounded-md border border-line bg-surface p-1 md:w-auto"
+          className="flex w-full rounded-md border border-line bg-surface p-1 sm:w-auto"
         >
           {filters.map((filter) => {
             const active = toolFilter === filter.value;
@@ -48,7 +47,7 @@ export function ToolCatalog() {
                 key={filter.value}
                 type="button"
                 aria-pressed={active}
-                className={`min-h-10 flex-1 px-4 font-mono text-[0.68rem] font-semibold uppercase tracking-[0.1em] transition-colors md:flex-none ${
+                className={`min-h-8 flex-1 px-3 text-xs font-semibold sm:flex-none ${
                   active
                     ? "rounded bg-ink text-surface"
                     : "rounded bg-transparent text-ink-muted hover:bg-canvas hover:text-ink"
@@ -66,7 +65,7 @@ export function ToolCatalog() {
         Showing {visibleTools.length} tools
       </p>
 
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="mt-4 grid gap-2.5 sm:grid-cols-2">
         {visibleTools.map((tool) => (
           <ToolCard
             key={tool.slug}
