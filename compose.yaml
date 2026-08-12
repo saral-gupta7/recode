@@ -39,7 +39,6 @@ services:
 
   migrate:
     image: migrate/migrate:v4.19.1
-    profiles: ["tools"]
     depends_on:
       postgres:
         condition: service_healthy
@@ -66,6 +65,8 @@ services:
     volumes:
       - media_data:/data
     depends_on:
+      migrate:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       redis:
@@ -80,6 +81,8 @@ services:
     volumes:
       - media_data:/data
     depends_on:
+      migrate:
+        condition: service_completed_successfully
       postgres:
         condition: service_healthy
       redis:

@@ -1,6 +1,6 @@
 # Recode
 
-Recode is an account-free, ad-free web application for common image and video
+Recode is an account-free, ad-free web application for focused image-processing
 tasks. A Next.js interface provides local previews and job progress, a Go API
 accepts uploads without holding long-running requests open, and a separate Go
 worker performs CPU-intensive FFmpeg processing.
@@ -13,11 +13,16 @@ worker performs CPU-intensive FFmpeg processing.
 | Convert image | `image_convert` | `format`: `jpg`, `jpeg`, `png`, or `webp` |
 | Compress image | `image_compress` | `quality`: 1–100; default 80 |
 | Resize image | `image_resize` | positive `width`, `height`, or both |
-| Video to grayscale | `video_grayscale` | none |
-| Extract audio | `video_extract_audio` | `format`: `mp3`, `wav`, or `m4a` |
-| Remove audio | `video_remove_audio` | none |
-| Convert video | `video_convert` | `format`: `mp4`, `webm`, or `mov` |
-| Clip video | `video_clip` | non-negative `start_seconds` and positive `duration_seconds` |
+| Crop image | `image_crop` | `x`, `y`, `width`, and `height` |
+| Rotate image | `image_rotate` | `angle`: `90`, `180`, or `270` |
+| Flip image | `image_flip` | `flip_direction`: `horizontal` or `vertical` |
+| Generate thumbnail | `image_thumbnail` | `preset`: `square`, `preview`, or `social` |
+| Strip metadata | `image_strip_metadata` | none |
+| Adjust colour | `image_adjust` | `brightness`, `contrast`, and `saturation` |
+| Blur image | `image_blur` | `strength`: 0.1–20 |
+| Sharpen image | `image_sharpen` | `strength`: 0.1–5 |
+| Pixelate image | `image_pixelate` | `block_size`: 2–100 |
+| Add canvas padding | `image_padding` | per-side padding and `background` colour |
 
 Options are sent as one JSON object in the multipart `options` field.
 
@@ -41,7 +46,7 @@ Go API ─────► local shared media volume
               └── final state goes to PostgreSQL
 ```
 
-The API and worker are separate processes. A long conversion therefore does not
+The API and worker are separate processes. A long image transformation does not
 hold an HTTP request open or consume an API handler until it finishes.
 
 In production the browser talks only to Next.js. Same-origin rewrites forward
@@ -117,24 +122,15 @@ Requirements:
 - Docker with Docker Compose
 - Go 1.26.4 or newer only when running tests outside containers
 
-Start PostgreSQL and Redis:
-
-```bash
-docker compose up -d postgres redis
-```
-
-Apply every pending migration:
-
-```bash
-docker compose run --rm migrate
-```
-
 Build and start the complete application:
 
 ```bash
 docker compose build api worker frontend
 docker compose up -d api worker frontend
 ```
+
+Compose starts PostgreSQL and Redis automatically, runs every pending migration,
+and only starts the API and worker after migration succeeds.
 
 Check dependency and API health:
 
