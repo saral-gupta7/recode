@@ -5,6 +5,7 @@ import "@fontsource/ibm-plex-mono/500.css";
 import "@fontsource/ibm-plex-mono/600.css";
 
 import { MobileHeader } from "@/components/layout/mobile-header";
+import { GoogleAnalytics } from "@next/third-parties/google";
 import { Sidebar } from "@/components/layout/sidebar";
 import { QueryProvider } from "@/components/providers/query-provider";
 import { ThemeProvider } from "@/components/providers/theme-provider";
@@ -107,6 +108,8 @@ export default function RootLayout({
               <div className="min-h-svh lg:pl-64">
                 <MobileHeader />
                 {children}
+
+                <GoogleAnalytics gaId="G-M7KBWRJ0C3" />
               </div>
             </WorkspaceProvider>
           </QueryProvider>
