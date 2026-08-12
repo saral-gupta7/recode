@@ -32,9 +32,9 @@ Options are sent as one JSON object in the multipart `options` field.
 client
   │ multipart upload
   ▼
-Go API ─────► local shared media volume
+Go API ─────► shared media volume
   │
-  ├─────────► PostgreSQL (job state and metadata)
+  ├─────────► Neon PostgreSQL (job state and metadata)
   │
   └─────────► Redis list (job ID)
                  │
@@ -43,7 +43,7 @@ Go API ─────► local shared media volume
                  ├── ffprobe validates the input
                  ├── FFmpeg processes it
                  ├── result goes to shared storage
-              └── final state goes to PostgreSQL
+              └── final state goes to Neon PostgreSQL
 ```
 
 The API and worker are separate processes. A long image transformation does not
@@ -115,117 +115,22 @@ and result retrieval. Zustand stores only cross-route client state. The anonymou
 owner token is persisted in `sessionStorage`, not local storage, and is never
 logged or encoded into a URL.
 
-## Run locally with Docker
+## Deployment configuration
 
-Requirements:
-
-- Docker with Docker Compose
-- Go 1.26.4 or newer only when running tests outside containers
-
-Build and start the complete application:
-
-```bash
-docker compose build api worker frontend
-docker compose up -d api worker frontend
-```
-
-Compose starts PostgreSQL and Redis automatically, runs every pending migration,
-and only starts the API and worker after migration succeeds.
-
-For a VPS, create a repository-root `.env` before the first start and use the
-same URL-safe password in both values:
+The production stack uses Neon PostgreSQL, a local Redis queue, and a shared
+Docker volume for uploaded and processed images. Copy [.env.example](.env.example)
+to an ignored repository-root `.env` and replace every placeholder with the
+direct, non-pooled connection string from Neon's **Connect** dialog.
 
 ```dotenv
-RECODE_POSTGRES_PASSWORD=replace_with_a_long_random_password
-RECODE_COMPOSE_DATABASE_URL=postgres://recode:replace_with_a_long_random_password@postgres:5432/recode?sslmode=disable
+RECODE_COMPOSE_DATABASE_URL=postgresql://USER:PASSWORD@NEON_HOST/neondb?sslmode=require&channel_binding=require
 ```
 
-PostgreSQL only reads `POSTGRES_PASSWORD` when its data volume is first
-initialized. If an existing volume was created with another password, updating
-`.env` alone will not change the database role. Reset it without deleting data:
-
-```bash
-docker compose up -d postgres
-docker compose exec postgres psql -U recode -d recode
-```
-
-At the `psql` prompt run `\password recode`, enter the password from `.env`
-twice, then exit with `\q`. Start the stack again with `docker compose up -d`.
-
-Check dependency and API health:
-
-```bash
-docker compose ps
-curl http://localhost:8080/health/live
-curl http://localhost:8080/health/ready
-```
-
-Open `http://localhost:3000`. The API is also exposed on `localhost:8080` for
-direct development, PostgreSQL on `localhost:5433`, and Redis on
-`localhost:6379`. Uploaded and generated files live in the Docker `media_data`
-volume.
-
-For frontend-only development:
-
-```bash
-cd frontend
-cp .env.example .env.local
-pnpm install
-pnpm dev
-```
-
-`RECODE_API_ORIGIN` is server-only. It defaults to `http://localhost:8080`;
-Docker sets it to `http://api:8080`.
-
-## Exercise the API
-
-Create a resize job. Replace `/path/to/photo.png` with a real file:
-
-```bash
-curl -sS -X POST http://localhost:8080/api/v1/jobs \
-  -F 'operation=image_resize' \
-  -F 'options={"width":640}' \
-  -F 'file=@/path/to/photo.png'
-```
-
-The `202 Accepted` response contains both an `id` and an `owner_token`:
-
-```json
-{
-  "id": "example-job-id",
-  "operation": "image_resize",
-  "status": "queued",
-  "progress": 0,
-  "attempt": 0,
-  "result_ready": false,
-  "owner_token": "example-secret"
-}
-```
-
-The token is shown only when the job is created. The future frontend must keep
-it client-side and send it as a bearer token:
-
-```bash
-curl -sS http://localhost:8080/api/v1/jobs/JOB_ID \
-  -H 'Authorization: Bearer OWNER_TOKEN'
-```
-
-Download a completed result:
-
-```bash
-curl -fLo result.jpg http://localhost:8080/api/v1/jobs/JOB_ID/result \
-  -H 'Authorization: Bearer OWNER_TOKEN'
-```
-
-Cancel or delete:
-
-```bash
-curl -sS -X POST http://localhost:8080/api/v1/jobs/JOB_ID/cancel \
-  -H 'Authorization: Bearer OWNER_TOKEN'
-
-curl -i -X DELETE http://localhost:8080/api/v1/jobs/JOB_ID \
-  -H 'Authorization: Bearer OWNER_TOKEN'
-```
+Never commit `.env` or paste its connection string into logs, documentation, or
+issues. Compose requires this value and refuses to start when it is missing. The
+one-shot migration service uses the same direct connection and must complete
+successfully before the API and worker start. Redis and generated media remain
+on persistent Docker volumes.
 
 ## API summary
 
@@ -258,13 +163,8 @@ Run unit tests:
 go test ./...
 ```
 
-Repository tests are skipped unless a test database URL is supplied. After
-running the migrations, include them with:
-
-```bash
-RECODE_TEST_DATABASE_URL='postgres://recode:recode_dev@localhost:5433/recode?sslmode=disable' \
-go test ./internal/repository/postgres
-```
+Repository tests are skipped unless `RECODE_TEST_DATABASE_URL` points to an
+isolated, migrated test database. Never run repository tests against production.
 
 Validate the frontend:
 
@@ -278,12 +178,14 @@ pnpm build
 
 ## Configuration
 
-Koanf loads defaults first and then overrides them from `RECODE_*` environment
-variables. See [.env.example](.env.example) for the complete local set.
+Koanf loads application defaults first and then applies `RECODE_*` environment
+overrides. Docker Compose maps the required `RECODE_COMPOSE_DATABASE_URL` secret
+to `RECODE_DATABASE_URL` inside the API and worker containers.
 
 Important production settings include:
 
-- `RECODE_DATABASE_URL`
+- `RECODE_COMPOSE_DATABASE_URL` (Compose host environment)
+- `RECODE_DATABASE_URL` (API and worker containers)
 - `RECODE_REDIS_ADDRESS`
 - `RECODE_STORAGE_ROOT`
 - `RECODE_UPLOAD_MAX_BYTES`

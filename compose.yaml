@@ -1,22 +1,6 @@
 name: recode
 
 services:
-  postgres:
-    image: postgres:18.4-alpine
-    environment:
-      POSTGRES_DB: recode
-      POSTGRES_USER: recode
-      POSTGRES_PASSWORD: ${RECODE_POSTGRES_PASSWORD:-recode_dev}
-    ports:
-      - "127.0.0.1:5433:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U recode -d recode"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
-
   redis:
     image: redis:8.8-alpine
     command:
@@ -39,14 +23,11 @@ services:
 
   migrate:
     image: migrate/migrate:v4.19.1
-    depends_on:
-      postgres:
-        condition: service_healthy
     volumes:
       - ./backend/migrations:/migrations:ro
     command:
       - -path=/migrations
-      - -database=${RECODE_COMPOSE_DATABASE_URL:-postgres://recode:recode_dev@postgres:5432/recode?sslmode=disable}
+      - -database=${RECODE_COMPOSE_DATABASE_URL:?set RECODE_COMPOSE_DATABASE_URL in .env}
       - up
 
   api:
@@ -55,7 +36,7 @@ services:
       target: api
     environment: &backend-environment
       RECODE_HTTP_ADDRESS: :8080
-      RECODE_DATABASE_URL: ${RECODE_COMPOSE_DATABASE_URL:-postgres://recode:recode_dev@postgres:5432/recode?sslmode=disable}
+      RECODE_DATABASE_URL: ${RECODE_COMPOSE_DATABASE_URL:?set RECODE_COMPOSE_DATABASE_URL in .env}
       RECODE_REDIS_ADDRESS: redis:6379
       RECODE_STORAGE_ROOT: /data
       RECODE_UPLOAD_MAX_BYTES: "1073741824"
@@ -67,8 +48,6 @@ services:
     depends_on:
       migrate:
         condition: service_completed_successfully
-      postgres:
-        condition: service_healthy
       redis:
         condition: service_healthy
     restart: unless-stopped
@@ -83,8 +62,6 @@ services:
     depends_on:
       migrate:
         condition: service_completed_successfully
-      postgres:
-        condition: service_healthy
       redis:
         condition: service_healthy
     restart: unless-stopped
@@ -109,6 +86,5 @@ services:
     restart: unless-stopped
 
 volumes:
-  postgres_data:
   redis_data:
   media_data:
